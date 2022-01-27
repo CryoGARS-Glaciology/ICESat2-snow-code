@@ -34,8 +34,11 @@ addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow/')
 DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
 DTM_name = 'WG-DEM-timeseries.mat';
 if contains(DTM_name,'.tif')
-    DTM_date = 'varies'; %only need to change this if the DTM is a geotiff
+    DTM_date = 'varies'; %only need to enter datestring in file name if the reference elevation map is a geotiff
 end
+
+%ROI polygon in UTM coordinates (not necessary for ATL08 data)
+S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/ROIs/Wolverine-2018-outline-UTM06N.shp'); %glacier outline if using ATL06
 
 %csv (be sure the path ends in a /)
 csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/';
@@ -46,21 +49,13 @@ abbrev = 'WG';
 %ICESat-2 product acronym
 acronym = 'ATL06';
 
-%if ATL06: glacier-specific information (glacier outline in WGS84 coordinates & ELA)
-if contains(acronym,'ATL06')
-    %outline
-   outline = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/ROIs/Wolverine-2018-outline.shp'); %catchment (NOT GLACIER) shapefile
-   [shpx,shpy,utmzone] = wgs2utm(outline.Y,outline.X);
-   
-   %equilbrium line altitude or typical late summer snowline
-   snowline = 1235; 
-   
-else %if ATL08: typical rain-snow transition line in catchment (need for coregistration if not enough summer data)
-    %typical rain-snow transition elevation (~1500 m for contiguous US Rockies)
-   snowline = 1400; 
+%if ATL06 equilbrium line altitude or typical late summer snowline
+%if ATL08 typical rain-snow transition line in catchment (need for coregistration if not enough summer data)
+if contains(acronym,'ATL06') %SITE SPECIFIC!!!
+   snowline = 1235; %Wolverine Glacier = 1235; 
+else %typical rain-snow transition elevation (~1500 m for contiguous US Rockies)
+   snowline = 1400; %RCEW = 1400;
 end
-
-
 
 %days of year
 modays_norm = [31 28 31 30 31 30 31 31 30 31 30 31];
@@ -199,7 +194,7 @@ for i = 1:length(csvs)
 %         if str2double(seas) >= 7 && str2double(seas) <= 9 %based on typical Alaska seasonality
             vert_bias = t.VerticalErrors(t.ReferenceElevation<=snowline); %must exclude data above snowline year-round for the glacier since the snowline marks the elevation of year-round snow
             vert_bias_season = t.season(t.ReferenceElevation<=snowline); vert_bias_refz = t.ReferenceElevation(t.ReferenceElevation<=snowline);
-            in = inpolygon(t.Easting, t.Northing, shpx, shpy); %identify footprints in the glacier outline
+            in = inpolygon(t.Easting, t.Northing, S.X, S.Y); %identify footprints in the glacier outline
             vert_bias(in) = []; vert_bias_season(in) = []; vert_bias_refz(in) = []; %remove data from the glacier surface b/c it's a non-stationary feature
             seasonal_bias = [seasonal_bias; vert_bias]; 
             seasonal_id = [seasonal_id; vert_bias_season]; seasonal_refz = [seasonal_refz; vert_bias_refz];

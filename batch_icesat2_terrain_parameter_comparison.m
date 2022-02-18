@@ -59,7 +59,7 @@ T = readtable([abbrev,'-ICESat2-',acronym,'-params.csv']);
 icesat2 = [csv_path,abbrev,'-ICESat2-',acronym,'-params.csv'];
 
 %determine whether this is a data update or a new data grab
-prompt = 'Are you only UPDATING terrain parameters (y/n)?';
+prompt = 'Are you replacing terrain parameters with updated data (y/n)?';
 str = input(prompt,'s');
 
 %pull metrics for each terrain parameter
@@ -107,7 +107,6 @@ for i = 1:length(terrain_params)
                         [params,~,~] = calc_icesat2_params(icesat2, tif, R2);
                         params(params==-9999) = NaN;
                         replace_data = ['T.',char(terrain_params(i)),' = params;']; eval(replace_data);
-%                         T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
                         clear params tif R2;
                     end
                 end
@@ -120,7 +119,6 @@ for i = 1:length(terrain_params)
                         [params,~,~] = calc_icesat2_params(icesat2, Z);
                         params(params==-9999) = NaN;
                         replace_data = ['T.',char(terrain_params(i)),' = params;']; eval(replace_data);
-%                         T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
                         clear params tif R2;
                     end
                 end

@@ -23,7 +23,7 @@ UTMzone = 6; EPSGcode = 32606;
 DEMs = dir('*.tif');
 for j = 1:length(DEMs)
     disp(DEMs(j).name);
-    [Z,R] = geotiffread(DEMs(j).name); Z(Z<0) = NaN;
+    [Z,R] = readgeoraster(DEMs(j).name); Z(Z<0) = NaN;
     [xgrid,ygrid] = meshgrid(R.XWorldLimits(1):R.CellExtentInWorldX:R.XWorldLimits(2),R.YWorldLimits(2):-R.CellExtentInWorldY:R.YWorldLimits(1));
     
     [LAT,LON]=utm2ll(xgrid,ygrid,UTMzone);
@@ -51,7 +51,7 @@ for j = 1:length(DEMs)
     drawnow;
     
     %save the data
-    geotiffwrite([DEMs(j).name(1:end-4),'2.tif'],Z,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %elevations
+    geotiffwrite([DEMs(j).name(1:end-4),'.tif'],Z,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %elevations
     geotiffwrite([DEMs(j).name(1:end-4),'-slope.tif'],SLOPE,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %slope
     geotiffwrite([DEMs(j).name(1:end-4),'-aspect.tif'],ASPECT,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %aspect
     disp('... terrain parameters saved');

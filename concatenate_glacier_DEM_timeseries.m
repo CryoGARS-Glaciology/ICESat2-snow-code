@@ -14,7 +14,7 @@ clearvars; close all;
 
 DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
 abbrev = 'WG';
-terrain = 'aspect';
+terrain = 'DEM';
 
 %days of year
 modays_norm = [31 28 31 30 31 30 31 31 30 31 30 31];
@@ -30,7 +30,6 @@ cd_to_DEMs = ['cd ',DTM_path]; eval(cd_to_DEMs);
 DEMs = dir(['*',terrain,'.tif']);
 disp('Looping through terrain parameter files...');
 for i = 1:length(DEMs)
-    disp(['number ',num2str(i),' of ',num2str(length(DEMs))]);
     if contains(version,'2019')
         [Z(i).z,Z(i).R] = geotiffread(DEMs(i).name);
     else

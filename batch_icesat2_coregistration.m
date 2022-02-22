@@ -126,10 +126,11 @@ for i = 1:length(csvs)
     %horizontally coregister & write the reference DTM and vertical offset
     %values to the csv file
     T = readtable(csvs(i).name);
+    %specify variables with column indices in square brackets if you want to cull data
     if contains(csvs(i).name, 'ATL08')
-        t = T(:,[1:3 6:8]); %only keep the ICESat2 latitude, longitude, elevation, easting, & northing AND brightness flag if ATL08
+        t = T(:,:); 
     else
-        t = T(:,[1:3 5:7]); %only keep the ICESat2 latitude, longitude, elevation, easting, & northing AND reported vertical uncertainty (Vert_Geo_error)
+        t = T(:,:);
     end
     %apply horizontal coregistration shift that minimizes the rmsd in elevations determined using fminsearch above
     if ~isnan(Abest(i,1))

@@ -49,9 +49,9 @@ except ImportError:
     from urllib2 import urlopen, Request, HTTPError, URLError, build_opener, HTTPCookieProcessor
 
 short_name = 'ATL08'
-version = '003'
+version = '005'
 time_start = '2018-10-14T00:00:00Z'
-time_end = '2020-12-13T19:58:43Z'
+time_end = '2022-02-21T23:59:59Z'
 bounding_box = ''
 polygon = '-116.87239638911682,43.06609795249623,-116.61038636158662,43.046387234735455,-116.58545653394613,43.32845920255642,-116.80449762180987,43.43079565471325,-116.87239638911682,43.06609795249623'
 filename_filter = ''

@@ -10,7 +10,7 @@ function write_icesat2_csv(inputdir, outputdir, shapefile,starter)
 %                    Note: the shapefile should be in WGS84 Cartesian Coordinates
 
 % created 21 December 2020 by Colten Elkin (coltenelkin@u.boisestate.edu)
-% last modified 14 June 2021 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
+% last modified 22 Feb 2022 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
 
 if(~isfolder(outputdir)) % create the output directory if it doesnt already exist
     mkdir(outputdir)
@@ -49,6 +49,7 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                 lat = h5read(h5test, ['/',beam,'/land_segments/latitude']); % read lats
                 lon = h5read(h5test, ['/',beam,'/land_segments/longitude']); % read lons
                 bright = h5read(h5test, ['/',beam,'/land_segments/brightness_flag']); % read in brightness of shot
+                snow = h5read(h5test, ['/',beam,'/land_segments/segment_snowcover']); % read in if the surface is estimated as 0=water,1=land,2=snow,3=ice
                 std = h5read(h5test, ['/',beam,'/land_segments/terrain/h_te_std']); % standard deviation
                 can = h5read(h5test, ['/',beam,'/land_segments/canopy/h_canopy']); % canopy elevation
                 if ~isempty(terrain)
@@ -60,13 +61,14 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                 lonlims = watershed.BoundingBox(:, 1); % save upper and lower longitudes of the watershed
                 latlims = watershed.BoundingBox(:, 2); % save upper and lower latitudes of the watershed
                 
-                % note: this trimming process is ~4x faster than just using inpolygon
+                % note: this trimming process is ~4x faster than using inpolygon but less precise
                 Ix = find(lon > min(lonlims) & lon < max(lonlims)); % find longitudes between limits
                 lon = lon(Ix); % cut down based on longitudes
                 lat = lat(Ix);
                 terrain = terrain(Ix);
                 terrain_bestfit = terrain_bestfit(Ix);
                 bright = bright(Ix);
+                snow = snow(Ix);
                 std = std(Ix);
                 can = can(Ix);
                 
@@ -76,10 +78,11 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                 terrain = terrain(Iy);
                 terrain_bestfit = terrain_bestfit(Iy);
                 bright = bright(Iy);
+                snow = snow(Iy);
                 std = std(Iy);
                 can = can(Iy);
                 
-                % now do a final trip to the actual watershed bounds
+                %final cropping to catchment shapefile bounds
                 wats = [watershed.X', watershed.Y']; % save coordinate tuples from the waterhsed shapefile
                 Ifinal = inpolygon(lon, lat, wats(:,1), wats(:,2));
                 if isempty(Ifinal)
@@ -92,6 +95,7 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                     terrain = terrain(Ifinal);
                     terrain_bestfit = terrain_bestfit(Ifinal);
                     bright = bright(Ifinal);
+                    snow = snow(Ifinal);
                     std = std(Ifinal);
                     can = can(Ifinal);
                     can(can > 1000) = nan; % change canopy elevation no data value to nan
@@ -111,6 +115,7 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                     s.Easting = easts;
                     s.Northing = norths;
                     s.Brightness_Flag = bright;
+                    s.Snow_Flag = snow;
                     
                     %write the csv
                     table = struct2table(s); % convert to a table
@@ -120,7 +125,7 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                     disp(['...output csv for ROI']);
                     clear s table;
                 end
-                clear terrain lat* lon* I* easts norths bright std;
+                clear terrain lat* lon* I* easts norths bright std snow can terrain_bestfit;
             end
         end
         clear h5test hinfo beamcheck;
@@ -151,8 +156,9 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                 terrain = h5read(h5test, ['/',beam,'/land_ice_segments/h_li']); % read terrain means
                 lat = h5read(h5test,  ['/',beam,'/land_ice_segments/latitude']); % read lats
                 lon = h5read(h5test,  ['/',beam,'/land_ice_segments/longitude']); % read lons
-                bright = h5read(h5test,  ['/',beam,'/land_ice_segments/sigma_geo_h']); % read in vertical geolocation error
+                geo_err = h5read(h5test,  ['/',beam,'/land_ice_segments/sigma_geo_h']); % read in vertical geolocation error
                 std = h5read(h5test,  ['/',beam,'/land_ice_segments/h_li_sigma']); % standard deviation
+                geoid = h5read(h5test,  ['/',beam,'/land_ice_segments/dem/geoid_h']); % standard deviation
                 if ~isempty(terrain)
                     disp('grabbed data');
                 end
@@ -163,22 +169,24 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                 latlims = watershed.BoundingBox(:, 2); % save upper and lower latitudes of the watershed
                 
                 
-                % note: this trimming process is ~4x faster than just using inpolygon
+                % note: this trimming process is ~4x faster than using inpolygon but less precise
                 Ix = find(lon > min(lonlims) & lon < max(lonlims)); % find longitudes between limits
                 lon = lon(Ix); % cut down based on longitudes
                 lat = lat(Ix);
                 terrain = terrain(Ix);
-                bright = bright(Ix);
+                geo_err = geo_err(Ix);
                 std = std(Ix);
+                geoid = geoid(Ix);
                 
                 Iy = find(lat > min(latlims) & lat < max(latlims)); % find lats between limits
                 lat = lat(Iy); % cut down based on latitudes
                 lon = lon(Iy);
                 terrain = terrain(Iy);
-                bright = bright(Iy);
+                geo_err = geo_err(Iy);
                 std = std(Iy);
+                geoid = geoid(Iy);
                 
-                % now do a final trip to the actual watershed bounds
+                %final cropping to catchment shapefile bounds
                 wats = [watershed.X', watershed.Y']; % save coordinate tuples from the waterhsed shapefile
                 Ifinal = inpolygon(lon, lat, wats(:,1), wats(:,2));
                 if isempty(Ifinal)
@@ -189,8 +197,9 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                 if ~isempty(lat) % continue if data is inside the region of interest
                     lon = lon(Ifinal); % conitnue saving data
                     terrain = terrain(Ifinal);
-                    bright = bright(Ifinal);
+                    geo_err = geo_err(Ifinal);
                     std = std(Ifinal);
+                    geoid = geoid(Ifinal);
                     
                     % use wgs2utm script to write easting and northing values
                     [easts, norths] = wgs2utm(lat, lon);
@@ -203,7 +212,8 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                     s.std = std;
                     s.Easting = easts;
                     s.Northing = norths;
-                    s.Vert_Geo_error = bright;
+                    s.Vert_Geo_error = geo_err;
+                    s.Geoid = geoid;
                     
                     %write the csv
                     table = struct2table(s); % convert to a table
@@ -213,7 +223,7 @@ for filecounter = starter:length(h5files) % loop through icesat2 files
                     disp(['...output csv for ROI']);
                     clear s table;
                 end
-                clear terrain lat* lon* I* easts norths bright std ;
+                clear terrain lat* lon* I* easts norths geo_err std geoid;
             end
         end
         clear h5test hinfo beamcheck;

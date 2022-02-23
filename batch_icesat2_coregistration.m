@@ -63,7 +63,7 @@ cumdays_norm = cumsum(modays_norm); cumdays_norm = [0 cumdays_norm(1:11)];
 modays_leap = [31 29 31 30 31 30 31 31 30 31 30 31];
 cumdays_leap = cumsum(modays_leap); cumdays_leap = [0 cumdays_leap(1:11)];
 
-%% Coregistration (ONLY RUN ONCE OR YOU NEED TO MODIFY THE CSV NAME SEARCH ON LINE 69)
+%% Coregistration
 %read in the snow-off reference elevation map
 cd_to_DTM = ['cd ',DTM_path]; eval(cd_to_DTM);
 disp('Loading DTM(s)');
@@ -77,15 +77,31 @@ elseif contains(DTM_name,'.mat')
     end
 end
 
-%identify the ICESat-2 data csv files
+%identify the raw ICESat-2 data csv files
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
 csvs = dir([acronym,'*.csv']); %if running more than once, rename original csvs to '*raw.csv' and change the search here to find files with that ending
+for i = 1:length(csvs)
+    filenamelength(i) = length(csvs(i).name);
+end
+csvs(filenamelength>45) = []; %automatically ignore edited files (longer names)
+clear filenamelength;
+
+%identify unique dates from csv filesnames (each date can have up to 6 csvs)
+for i = 1:length(csvs)
+    csv_dates(i,:) = csvs(i).name(7:20);
+end
+[unique_dates,unique_refs,unique_inds] = unique(csv_dates,'rows');
+clear csv_dates;
 
 %loop through the csvs & determine the horizontal offsets
 tic;
-for i = 1:length(csvs)
-    disp(['Coregistering csv #',num2str(i),' (',csvs(i).name,')']);
-    ICESat2_file = [csv_path,csvs(i).name]; %compile the file name
+for i = 1:length(unique_refs)
+    disp(['Coregistering data from date #',num2str(i),' (',unique_dates(i,1:4),'/',unique_dates(i,5:6),'/',unique_dates(i,7:8),')']);
+    %identify
+    filerefs = find(unique_inds==i);
+    for j = 1:length(filerefs)
+        ICESat2_files(j,:) = [csvs(filerefs(j)).folder,'/',csvs(filerefs(j)).name]; %compile the file name
+    end
     
     %if analyzing ATL06 data for a glacier, select the most recent DEM
     if contains(acronym,'ATL06')
@@ -111,44 +127,47 @@ for i = 1:length(csvs)
     end
     
     %determine the map-view offset
-    myFuncHandle = @(A)coregister_icesat2(ICESat2_file,DTM,Ref,A); %create the handle to call the coregistration function
-    vals = readmatrix(ICESat2_file); %read in the csv to check its size
-    if size(vals,1) > 1
+    myFuncHandle = @(A)coregister_icesat2(ICESat2_files,DTM,Ref,A); %create the handle to call the coregistration function
+%     vals = readmatrix(ICESat2_file); %read in the csv to check its size
+%     if size(vals,1) > 1
         [Abest(i,:),RMSDbest(i)] = fminsearch(myFuncHandle,[0,0]); %initial horizontal offset estimate = [0,0] = [0 m East, 0 m North]
-    else
-        Abest(i,:) = [NaN NaN]; RMSDbest(i) = NaN;
-    end
-    save('Abest.mat','Abest','-v7.3'); save('RMSDbest.mat','RMSDbest','-v7.3');
-    disp(['x-offset = ',num2str(Abest(i,1)),' m & y-offset = ',num2str(Abest(i,2)),' m w/ RMSD = ',num2str(RMSDbest(i)),' m']);
+%     else
+%         Abest(i,:) = [NaN NaN]; RMSDbest(i) = NaN;
+%     end
+    save([abbrev,'-Abest.mat'],'Abest','-v7.3'); save([abbrev,'-RMSDbest.mat'],'RMSDbest','-v7.3');
+    fprintf('x-offset = %5.2f m & y-offset = %5.2f m w/ RMSD = %5.2f m',Abest(i,1),Abest(i,2),RMSDbest(i));
     clear vals;
     toc; tic; %display processing time
     
-    %horizontally coregister & write the reference DTM and vertical offset
-    %values to the csv file
-    T = readtable(csvs(i).name);
-    %specify variables with column indices in square brackets if you want to cull data
-    if contains(csvs(i).name, 'ATL08')
-        t = T(:,:); 
-    else
-        t = T(:,:);
+    %horizontally coregister & write the reference DTM and vertical offset values to the csv file
+    for j = 1:length(filerefs)
+        %read the data
+        T = readtable(csvs(filerefs(j)).name);
+        %specify variables with column indices in square brackets if you want to cull data
+        if contains(csvs(filerefs(j)).name, 'ATL08')
+            t = T(:,:);
+        else
+            t = T(:,:);
+        end
+        %apply horizontal coregistration shift that minimizes the rmsd in elevations determined using fminsearch above
+        if ~isnan(Abest(i,1))
+            t.Northing = t.Northing+Abest(i,2); t.Easting = t.Easting+Abest(i,1);
+        end
+        %extract reference elevations and vertical errors
+        %NOTE: vertical errors = ICESat2-reference so errors > 0 mean ICESat2
+        %elevations are greater than the reference surface (possible snow signal)
+        if length(t.Elevation) > 1
+            [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors(ICESat2_files(j,:),DTM,Ref);
+            fprintf('Median vertical bias after horizontal coregistration = %5.2f m',nanmedian(t.VerticalErrors));
+        else
+            t.ReferenceElevation = NaN; t.VerticalErrors = NaN;
+            disp('Too few data to coregister!');
+        end
+        writetable(t,[csvs(filerefs(j)).name(1:end-4),'-edited.csv']);
+        
+        clear T t;
     end
-    %apply horizontal coregistration shift that minimizes the rmsd in elevations determined using fminsearch above
-    if ~isnan(Abest(i,1))
-        t.Northing = t.Northing+Abest(i,2); t.Easting = t.Easting+Abest(i,1); 
-    end
-    %extract reference elevations and vertical errors
-    %NOTE: vertical errors = ICESat2-reference so errors > 0 mean ICESat2
-    %elevations are greater than the reference surface (possible snow signal)
-    if length(t.Elevation) > 1
-        [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors(ICESat2_file,DTM,Ref);
-        disp(['Median vertical bias after horizontal coregistration = ',num2str(nanmedian(t.VerticalErrors)),' m']);
-    else
-        t.ReferenceElevation = NaN; t.VerticalErrors = NaN;
-        disp('Too few data to coregister!');
-    end
-    writetable(t,[csvs(i).name(1:end-4),'-edited.csv']);
-    disp(['Adjusted coordinates and reference elevations saved to ',csvs(i).name(1:end-4),'-edited.csv']);
-    clear T t;
+    disp(['Adjusted coordinates and reference elevations saved for ',unique_dates(i,1:4),'/',unique_dates(i,5:6),'/',unique_dates(i,7:8)]);
     disp(' '); %leave a space in the command line after the outputs
 end
 

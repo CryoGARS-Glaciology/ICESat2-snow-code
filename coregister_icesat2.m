@@ -1,7 +1,7 @@
 function rmsez = coregister_icesat2(icesat2, elevations, R2, A)
 % Function COREGISTER_ICESAT2 coregisters icesat-2 data with a corresponding digital
 % terrain model 
-% INPUTS: icesat2 = a csv file with icesat 2 elevations created using the
+% INPUTS: icesat2 = csv file(s) with icesat 2 elevations created using the
 %                       h5 to csv jupyter notebook
 %      elevations = the reference elevation matrix 
 %              R2 = the cell map reference for the reference DTM
@@ -12,7 +12,7 @@ function rmsez = coregister_icesat2(icesat2, elevations, R2, A)
 %                       elevations
 
 % Created 19 October 2020 by Colten Elkin (coltenelkin@u.boisestate.edu)
-% last modified 08 June 2021 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
+% last modified 23 February 2022 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
 
 %filter reference DTM elevations
 % elevations(elevations < -10) = nan; 
@@ -20,14 +20,19 @@ elevations(elevations < -10) = nan; % throw out trash data
 elevations(elevations > 10000) = nan; % more trash takeout
 
 %load the ICESat-2 data
-T = readtable(icesat2);
+T = [];
+for j = 1:size(icesat2,1)
+    t = readtable(icesat2(j,:));
+    T = [T; t];
+    clear t;
+end
 zmod = T.Elevation(:); % save the 'model' elevations (icesat-2 elevations)
 easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
 
 % for ATL08 files only use snow-free data (brightness flag == 0)
-if contains(icesat2, 'ATL08') % ATL08 commands
+if contains(icesat2(1,:), 'ATL08') % ATL08 commands
     bright = T.Brightness_Flag; 
     ib = find(bright == 0);
     easts = easts(ib);
@@ -50,7 +55,7 @@ for r = 1:length(theta)
         theta(r) = abs(atan((norths(r+1) - norths(r))/(easts(r+1) - easts(r)))); % trig to get angle theta along-track
     end
     
-    if contains(icesat2, 'ATL08') % ATL08 commands   
+    if contains(icesat2(1,:), 'ATL08') % ATL08 commands   
         % get the x and y vectors to form the polygon
         xpoly(1) = easts(r) + (footwidth/2) - footwidth/2*cos((pi/2) - theta(r)); % calculate the 4 corners in the x direction
         xpoly(2) = easts(r) + (footwidth/2) + footwidth/2*cos((pi/2) - theta(r));
@@ -66,7 +71,7 @@ for r = 1:length(theta)
         ypoly = ypoly+A(2); % adjust by the nothing offset
         ys{r} = [ypoly(1), ypoly(2), ypoly(3), ypoly(4), ypoly(1)]; % save the corners as a vector in the y-s cell array
         
-    elseif contains(icesat2, 'ATL06') % ATL06 commands
+    elseif contains(icesat2(1,:), 'ATL06') % ATL06 commands
         % get the x and y vectors to form the polygon
         xpoly(1) = easts(r) + (footwidth/2) - footwidth/2*cos((pi/2) - theta(r)); % calculate the 4 corners in the x direction
         xpoly(2) = easts(r) + (footwidth/2) + footwidth/2*cos((pi/2) - theta(r));

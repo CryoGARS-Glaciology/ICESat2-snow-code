@@ -79,7 +79,7 @@ end
 
 %look for the coregistration output files & reload them if they exist
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
-output_shifts = dir(abbrev,'-Abest.mat');
+output_shifts = dir([abbrev,'-Abest.mat']);
 if ~isempty(output_shifts)
    load([abbrev,'-Abest.mat']); load([abbrev,'-RMSDbest.mat']); 
 end

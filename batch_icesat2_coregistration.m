@@ -35,6 +35,8 @@ DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs
 DTM_name = 'WG-DEM-timeseries.mat';
 if contains(DTM_name,'.tif')
     DTM_date = '20071114'; %only need to enter datestring in file name if the reference elevation map is a geotiff
+else
+    disp('If using DEM time series, make sure they are vertically coregistered (done in concatenate_glacier_DEM_timeseries.m)');
 end
 
 %ROI polygon in UTM coordinates (not necessary for ATL08 data)
@@ -195,19 +197,13 @@ if contains(DTM_name,'.tif')
 elseif contains(DTM_name,'.mat')
     load_DTM = ['load ',DTM_name]; eval(load_DTM);
     for i = 1:length(Z)
-        DEMdate(i,1) = Z(i).deciyear;
+        DEMdate(i) = Z(i).deciyear;
     end
 end
 
 %identify the ICESat-2 data csv files
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
 csvs = dir('*-edited.csv');
-
-%days of year for calculation of decimal dates
-modays_norm = [31 28 31 30 31 30 31 31 30 31 30 31];
-cumdays_norm = cumsum(modays_norm); cumdays_norm = [0 cumdays_norm(1:11)];
-modays_leap = [31 29 31 30 31 30 31 31 30 31 30 31];
-cumdays_leap = cumsum(modays_leap); cumdays_leap = [0 cumdays_leap(1:11)];
 
 %loop through the csvs, assign seasons, & compile into one table
 seasonal_zbias = []; seasonal_id = []; seasonal_yrref = []; seasonal_zref = [];
@@ -275,16 +271,21 @@ end
 %%determine whether the seasonal snow- and ice-free residuals to check that
 %summer (July-Sept) data should be used, otherwise use spring (April-June) data, using the
 %two-sample Kolmogorov-Smirnov test to test for significant differences in distributions
-figure; set(gcf,'position',[50 50 800 1000]);
-seasonal_colors = [253,174,97; 43,131,186; 171,221,164; 215,25,28]./255; %purple-orange colormap
+figure; set(gcf,'position',[50 50 800 1000]); clear hp;
+seasonal_colors = [43,131,186; 171,221,164; 215,25,28; 253,174,97]./255;
 for i = 1:length(DEMdate)
-subplot(length(DEMdate),1,i);
+    subplot(length(DEMdate),1,i); subpos = get(gca,'position');
     for j = [4 1 2 3];
         hp(j) = histogram(seasonal_zbias(seasonal_id==j & seasonal_zref<=snowline & seasonal_yrref == DEMdate(i)),[floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)):1:ceil(nanmedian(seasonal_zbias)+3*1.4826*mad(seasonal_zbias,1))],'Normalization','pdf'); hp(j).FaceColor = seasonal_colors(j,:); hold on;
     end
+    set(gca,'fontsize',16); ylims = get(gca,'ylim');
+    text(floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)),max(ylims)-0.05*range(ylims),[' Year: ',num2str(floor(DEMdate(i))),'-',num2str(ceil(DEMdate(i)))],'fontsize',14);
+if i == 1;
+title('Off-ice elevation differences before vertical coregistration');
 end
-xlabel('Elevation difference (m)'); ylabel('Count');
-leg = legend(hp,'autumn','winter','spring','summer');
+end
+xlabel('Elevation difference (m)','fontsize',16); ylabel('Probability density','fontsize',16);
+leg = legend(hp,'winter','spring','summer','autumn');
 %test difference in spring below snowline & summer residuals
 sum_sigtest = kstest2(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline),seasonal_zbias(seasonal_id==3));
 if sum_sigtest == 1
@@ -300,6 +301,7 @@ if strmatch(str,'y')==1
     disp('...using spring data for vertical coregistration');
     vertical_adjustment = nanmedian(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline)); vertical_adjustment(isnan(vertical_adjustment)) = 0;
 else
+    disp('...using summer data for vertical coregistration');
     vertical_adjustment = nanmedian(seasonal_zbias(seasonal_id==3)); vertical_adjustment(isnan(vertical_adjustment)) = 0;
 end
 
@@ -346,7 +348,6 @@ end
 %calculate elevation bias & RMSE stats after horizontal AND vertical coregistration
 disp('Computing elevation residuals (T.differences) from compiled table of all dates');
 T = readtable([abbrev,'-ICESat2-',acronym,'-params.csv']);
-% [~,T.differences,RMSE] = extract_icesat2_vertical_errors([csv_path,abbrev,'-ICESat2-ATL08-params.csv'],DTM,Ref);
 T.differences = T.Elevation_Coregistered - T.ReferenceElevation;
 RMSE = sqrt(nansum((T.differences).^2)./length(T.differences));
 writetable(T,[abbrev,'-ICESat2-',acronym,'-params.csv']);
@@ -363,10 +364,11 @@ disp(['Fall median +/- MAD elevation difference = ',num2str(nanmedian(T.differen
     '+/-',num2str(mad(T.differences(T.season==4),1)),' (RMSE = ',num2str(sqrt(nansum((T.differences(T.season==4)).^2)./length(T.differences(T.season==4)))),')']);
 %plot histograms of seasonal differences between ICESat2 & reference elevations
 figure; clear h;
-h(1) = histogram(T.differences(T.season==3),'Normalization','pdf'); h(1).BinWidth = 0.5; h(1).FaceColor = seasonal_colors(4,:); h(1).FaceAlpha = 1; h(1).EdgeColor = seasonal_colors(4,:); hold on;
-h(2) = histogram(T.differences(T.season==4),'Normalization','pdf'); h(2).BinWidth = 0.5; h(2).FaceColor = seasonal_colors(1,:); h(2).FaceAlpha = 0.5; h(2).EdgeColor = seasonal_colors(1,:); h(2).LineWidth = 1; hold on;
-h(3) = histogram(T.differences(T.season==1),'Normalization','pdf'); h(3).BinWidth = 0.5; h(3).FaceColor = seasonal_colors(2,:); h(3).FaceAlpha = 0.5; h(3).EdgeColor = seasonal_colors(2,:); h(3). LineStyle = '--'; hold on;
-h(4) = histogram(T.differences(T.season==2),'Normalization','pdf'); h(4).BinWidth = 0.5; h(4).FaceColor = seasonal_colors(3,:); h(4).FaceAlpha = 0.5; h(4).EdgeColor = seasonal_colors(3,:); h(4).LineWidth = 1; h(4). LineStyle = ':'; hold on;
-set(gca,'fontsize',16,'xlim',[floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)) ceil(nanmedian(seasonal_zbias)+3*1.4826*mad(seasonal_zbias,1))]); leg = legend(h,'summer','autumn','winter','spring');
-xlabel('Elevation residuals (m)'); ylabel('Count');
+h(1) = histogram(T.differences(T.season==3),'Normalization','pdf'); h(1).BinWidth = 0.5; h(1).FaceColor = seasonal_colors(3,:); h(1).FaceAlpha = 1; h(1).EdgeColor = seasonal_colors(3,:); hold on;
+h(2) = histogram(T.differences(T.season==4),'Normalization','pdf'); h(2).BinWidth = 0.5; h(2).FaceColor = seasonal_colors(4,:); h(2).FaceAlpha = 0.5; h(2).EdgeColor = seasonal_colors(4,:); h(2).LineWidth = 1; hold on;
+h(3) = histogram(T.differences(T.season==1),'Normalization','pdf'); h(3).BinWidth = 0.5; h(3).FaceColor = seasonal_colors(1,:); h(3).FaceAlpha = 0.5; h(3).EdgeColor = seasonal_colors(1,:); h(3). LineStyle = '--'; hold on;
+h(4) = histogram(T.differences(T.season==2),'Normalization','pdf'); h(4).BinWidth = 0.5; h(4).FaceColor = seasonal_colors(2,:); h(4).FaceAlpha = 0.5; h(4).EdgeColor = seasonal_colors(2,:); h(4).LineWidth = 1; h(4). LineStyle = ':'; hold on;
+set(gca,'fontsize',16,'xlim',[floor(nanmedian(T.differences)-3*1.4826*mad(T.differences,1)) ceil(nanmedian(T.differences)+3*1.4826*mad(T.differences,1))]); 
+leg = legend(h,'summer','autumn','winter','spring');
+xlabel('Elevation residuals (m)'); ylabel('Probability density');
 saveas(gcf,[abbrev,'_elevation-residual_histograms.eps'],'epsc');

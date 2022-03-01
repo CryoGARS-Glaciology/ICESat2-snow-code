@@ -87,18 +87,16 @@ end
 elevation_report = zeros([1, length(xs)]);
 
 %identify the reference elevation points in each ICESat2 footprint
-for t = 1:length(xs)
-    xv = xs{t}; % bounding box x vector
-    yv = ys{t}; % bounding box y vector
+for k = 1:length(xs)
+    xv = xs{k}; % bounding box x vector
+    yv = ys{k}; % bounding box y vector
     
     % first trimming
     in = inpolygon(xgrid, ygrid, xv, yv); % get logical array of in values
-    pointsinx = xgrid(in); % save x locations
-    pointsiny = ygrid(in); % save y locations
+%     pointsinx = xgrid(in); % save x locations
+%     pointsiny = ygrid(in); % save y locations
     elevationsin = elevations(in); % save elevations
-    elevation_report(t) = nanmean(elevationsin); %NEED TO MODIFY... 
-    %%FIGURE OUT HOW TO WEIGHT ACROSS-TRACK & HOW TO FIT A SLOPE LIKE
-    %%h_te_best_fit VARIABLE SAVED WITH ATL08
+    elevation_report(k) = nanmean(elevationsin); %NEED TO MODIFY... 
 end
 ztruth = elevation_report(:);
 

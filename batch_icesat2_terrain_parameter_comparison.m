@@ -21,20 +21,20 @@
 clearvars; close all; 
 
 %path for the code
-addpath('/Users/ellynenderlin/mfiles/ICESat2-snow/')
+addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
 
 %terrain parameter file (be sure the path ends in a /)
-TP_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
-TP_name = 'WG-DEM-timeseries.mat'; %list the DEM name and it will find all associated terrain param files
+TP_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/DEMs/';
+TP_name = 'RCEW_1m_WGS84UTM11_WGS84.tif'; %list the DEM name and it will find all associated terrain param files
 
 %site concanated csv (be sure the path ends in a /)
-csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/';
+csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/csvs/';
 
 %site abbreviation for file names
-abbrev = 'WG'; 
+abbrev = 'RCEW'; 
 
 %ICESat-2 product acronym
-acronym = 'ATL06';
+acronym = 'ATL08';
 
 %recommended terrain parameters to add to the table
 if contains(acronym,'ATL08')

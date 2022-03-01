@@ -31,23 +31,23 @@ clearvars; close all;
 addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
 
 %DTM (be sure the path ends in a /)
-DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/DEMs/';
-DTM_name = 'RCEW_1m_WGS84UTM11_WGS84.tif';
+DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
+DTM_name = 'WG-DEM-timeseries.mat';
 if contains(DTM_name,'.tif')
     DTM_date = '20071114'; %only need to enter datestring in file name if the reference elevation map is a geotiff
 end
 
 %ROI polygon in UTM coordinates (not necessary for ATL08 data)
-S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/ROIs/RCEW-outline_WGS84-UTM11N.shp'); %glacier outline if using ATL06
+S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/ROIs/Wolverine-2018-outline-UTM06N.shp'); %glacier outline if using ATL06
 
 %csv (be sure the path ends in a /)
-csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/csvs/';
+csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/csvs/';
 
 %site abbreviation for file names
-abbrev = 'RCEW'; 
+abbrev = 'WG'; 
 
 %ICESat-2 product acronym
-acronym = 'ATL08';
+acronym = 'ATL06';
 
 %if ATL06 equilbrium line altitude or typical late summer snowline
 %if ATL08 typical rain-snow transition line in catchment (need for coregistration if not enough summer data)
@@ -64,6 +64,8 @@ modays_leap = [31 29 31 30 31 30 31 31 30 31 30 31];
 cumdays_leap = cumsum(modays_leap); cumdays_leap = [0 cumdays_leap(1:11)];
 
 %% Coregistration
+disp('Horizontal coregistration. This takes a LONG LONG time!');
+
 %read in the snow-off reference elevation map
 cd_to_DTM = ['cd ',DTM_path]; eval(cd_to_DTM);
 disp('Loading DTM(s)');
@@ -86,7 +88,7 @@ end
 
 %identify the raw ICESat-2 data csv files
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
-csvs = dir([acronym,'*.csv']); %if running more than once, rename original csvs to '*raw.csv' and change the search here to find files with that ending
+csvs = dir([acronym,'*.csv']);
 for i = 1:length(csvs)
     filenamelength(i) = length(csvs(i).name);
 end
@@ -112,7 +114,6 @@ for i = 1:length(unique_refs)
     
     %if analyzing ATL06 data for a glacier, select the most recent DEM
     if contains(acronym,'ATL06')
-%         clear DTM Ref;
 
         %convert datestamp to decimal dates
         yr = str2double(csvs(filerefs(1)).name(7:10));
@@ -161,8 +162,6 @@ for i = 1:length(unique_refs)
             t.Northing = t.Northing+Abest(i,2); t.Easting = t.Easting+Abest(i,1);
         end
         %extract reference elevations and vertical errors
-        %NOTE: vertical errors = ICESat2-reference so errors > 0 mean ICESat2
-        %elevations are greater than the reference surface (possible snow signal)
         if length(t.Elevation) > 1
             [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors(ICESat2_files(j,:),DTM,Ref);
             fprintf('Median vertical bias after horizontal coregistration = %5.2f m \n',nanmedian(t.VerticalErrors));
@@ -179,7 +178,26 @@ for i = 1:length(unique_refs)
 end
 
 %% apply median snow-free offset to vertically coregister 
-close all;
+close all; disp('Vertical coregistration:');
+
+%read in the snow-off reference elevation map
+cd_to_DTM = ['cd ',DTM_path]; eval(cd_to_DTM);
+if contains(DTM_name,'.tif')
+    [DTM,Ref] = readgeoraster(DTM_name);
+    yr = str2double(DTM_date(1:4));
+    if mod(yr,4) == 0
+        decidate = (cumdays_leap(str2double(DTM_date(5:6)))+str2double(DTM_date(7:8)))/sum(modays_leap);
+    else
+        decidate = (cumdays_norm(str2double(DTM_date(5:6)))+str2double(DTM_date(7:8)))/sum(modays_norm);
+    end
+    deciyear = yr+decidate;
+    DEMdate = deciyear; clear yr decidate deciyear;
+elseif contains(DTM_name,'.mat')
+    load_DTM = ['load ',DTM_name]; eval(load_DTM);
+    for i = 1:length(Z)
+        DEMdate(i,1) = Z(i).deciyear;
+    end
+end
 
 %identify the ICESat-2 data csv files
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
@@ -192,7 +210,7 @@ modays_leap = [31 29 31 30 31 30 31 31 30 31 30 31];
 cumdays_leap = cumsum(modays_leap); cumdays_leap = [0 cumdays_leap(1:11)];
 
 %loop through the csvs, assign seasons, & compile into one table
-seasonal_bias = []; seasonal_id = []; seasonal_refz = [];
+seasonal_zbias = []; seasonal_id = []; seasonal_yrref = []; seasonal_zref = [];
 disp('Extracting vertical offsets from snow-off data...');
 for i = 1:length(csvs)
     ICESat2 = [csv_path,csvs(i).name]; %compile the file name
@@ -210,24 +228,44 @@ for i = 1:length(csvs)
         seas_flag = 4;
     end
     t.season = repmat(seas_flag,size(t.Elevation));
+
+	%if using multiple time-stamped DEMs, identify the DEM used
+    if length(DEMdate) > 1
+        %convert csv datestamp to decimal dates
+        yr = str2double(csvs(i).name(7:10));
+        if mod(yr,4) == 0
+            decidate = (cumdays_leap(str2double(csvs(i).name(11:12)))+str2double(csvs(i).name(13:14)))/sum(modays_leap);
+        else
+            decidate = (cumdays_norm(str2double(csvs(i).name(11:12)))+str2double(csvs(i).name(13:14)))/sum(modays_norm);
+        end
+        deciyear = yr+decidate;
+        
+        %identify the most recent DEM
+        yr_ref = find(DEMdate<=deciyear,1,'last');
+        t.DEMdate = repmat(DEMdate(yr_ref),size(t.season));
+        clear yr_ref;
+        clear yr decidate deciyear;
+    else
+        t.DEMdate = repmat(DEMdate,size(t.season));
+    end
     
     %compile seasonal elevation biases
     if contains(csvs(i).name, 'ATL08')
-%         if str2double(seas) >= 6 && str2double(seas) <= 11 %based on SNOTEL snow-free months
-            seasonal_bias = [seasonal_bias; t.VerticalErrors(t.Brightness_Flag==0)]; %make sure only snow-free elevation differences are used
-            seasonal_id = [seasonal_id; t.season(t.Brightness_Flag==0)];
-            seasonal_refz = [seasonal_refz; t.ReferenceElevation(t.Brightness_Flag==0)];
-%         end
+        seasonal_zbias = [seasonal_zbias; t.VerticalErrors(t.Brightness_Flag==0)]; %make sure only snow-free elevation differences are used
+        seasonal_id = [seasonal_id; t.season(t.Brightness_Flag==0)];
+        seasonal_yrref = [seasonal_yrref; t.DEMdate(t.Brightness_Flag==0)];
+        seasonal_zref = [seasonal_zref; t.ReferenceElevation(t.Brightness_Flag==0)];
     else
-%         if str2double(seas) >= 7 && str2double(seas) <= 9 %based on typical Alaska seasonality
-            vert_bias = t.VerticalErrors(t.ReferenceElevation<=snowline); %must exclude data above snowline year-round for the glacier since the snowline marks the elevation of year-round snow
-            vert_bias_season = t.season(t.ReferenceElevation<=snowline); vert_bias_refz = t.ReferenceElevation(t.ReferenceElevation<=snowline);
-            in = inpolygon(t.Easting, t.Northing, S.X, S.Y); %identify footprints in the glacier outline
-            vert_bias(in) = []; vert_bias_season(in) = []; vert_bias_refz(in) = []; %remove data from the glacier surface b/c it's a non-stationary feature
-            seasonal_bias = [seasonal_bias; vert_bias]; 
-            seasonal_id = [seasonal_id; vert_bias_season]; seasonal_refz = [seasonal_refz; vert_bias_refz];
-            clear vert_bias* in;
-%         end
+        vert_bias = t.VerticalErrors(t.ReferenceElevation<=snowline); %must exclude data above snowline year-round for the glacier since the snowline marks the elevation of year-round snow
+        vert_bias_season = t.season(t.ReferenceElevation<=snowline); vert_bias_yr = t.DEMdate(t.ReferenceElevation<=snowline);
+        vert_bias_refz = t.ReferenceElevation(t.ReferenceElevation<=snowline);
+        in = inpolygon(t.Easting(t.ReferenceElevation<=snowline), t.Northing(t.ReferenceElevation<=snowline), S.X, S.Y); %identify footprints in the glacier outline
+        vert_bias(in) = []; vert_bias_season(in) = []; vert_bias_yr(in) = []; vert_bias_refz(in) = []; %remove data from the glacier surface b/c it's a non-stationary feature
+        seasonal_zbias = [seasonal_zbias; vert_bias];
+        seasonal_id = [seasonal_id; vert_bias_season]; 
+        seasonal_yrref = [seasonal_yrref; vert_bias_yr];
+        seasonal_zref = [seasonal_zref; vert_bias_refz];
+        clear vert_bias* in;
     end
     writetable(t,csvs(i).name);
     clear t;
@@ -237,28 +275,32 @@ end
 %%determine whether the seasonal snow- and ice-free residuals to check that
 %summer (July-Sept) data should be used, otherwise use spring (April-June) data, using the
 %two-sample Kolmogorov-Smirnov test to test for significant differences in distributions
-figure; seasonal_colors = [253,174,97; 43,131,186; 171,221,164; 215,25,28]./255; %purple-orange colormap
-for j = [4 1 2 3];
-hp(j) = histogram(seasonal_bias(seasonal_id==j & seasonal_refz<=snowline),[floor(nanmean(seasonal_bias)-3*nanstd(seasonal_bias)):1:ceil(nanmean(seasonal_bias)+3*nanstd(seasonal_bias))],'Normalization','pdf'); hp(j).FaceColor = seasonal_colors(j,:); hold on;
+figure; set(gcf,'position',[50 50 800 1000]);
+seasonal_colors = [253,174,97; 43,131,186; 171,221,164; 215,25,28]./255; %purple-orange colormap
+for i = 1:length(DEMdate)
+subplot(length(DEMdate),1,i);
+    for j = [4 1 2 3];
+        hp(j) = histogram(seasonal_zbias(seasonal_id==j & seasonal_zref<=snowline & seasonal_yrref == DEMdate(i)),[floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)):1:ceil(nanmedian(seasonal_zbias)+3*1.4826*mad(seasonal_zbias,1))],'Normalization','pdf'); hp(j).FaceColor = seasonal_colors(j,:); hold on;
+    end
 end
 xlabel('Elevation difference (m)'); ylabel('Count');
 leg = legend(hp,'autumn','winter','spring','summer');
 %test difference in spring below snowline & summer residuals
-sum_sigtest = kstest2(seasonal_bias(seasonal_id==2 & seasonal_refz<=snowline),seasonal_bias(seasonal_id==3));
+sum_sigtest = kstest2(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline),seasonal_zbias(seasonal_id==3));
 if sum_sigtest == 1
     disp('Summer elevation residuals are significantly different than spring residuals below the snowline:');
-    fprintf('Summer median +/- MAD errors are %3.2f +/- %3.2f m\n',nanmedian(seasonal_bias(seasonal_id==3)),mad(seasonal_bias(seasonal_id==3),1));
+    fprintf('Summer median +/- MAD errors are %3.2f +/- %3.2f m\n',nanmedian(seasonal_zbias(seasonal_id==3)),mad(seasonal_zbias(seasonal_id==3),1));
     fprintf('Spring below-snowline median +/- MAD errors are %3.2f +/- %3.2f m\n',...
-        nanmedian(seasonal_bias(seasonal_id==2 & seasonal_refz<=snowline)),mad(seasonal_bias(seasonal_id==2 & seasonal_refz<=snowline),1));
+        nanmedian(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline)),mad(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline),1));
 end
 %user makes the decision to use summer or spring data based on plots & significance testing
 prompt = 'Are the summer elevation residuals questionable based on histograms & significance test (y/n)?';
 str = input(prompt,'s');
 if strmatch(str,'y')==1
     disp('...using spring data for vertical coregistration');
-    vertical_adjustment = nanmedian(seasonal_bias(seasonal_id==2 & seasonal_refz<=snowline)); vertical_adjustment(isnan(vertical_adjustment)) = 0;
+    vertical_adjustment = nanmedian(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline)); vertical_adjustment(isnan(vertical_adjustment)) = 0;
 else
-    vertical_adjustment = nanmedian(seasonal_bias(seasonal_id==3)); vertical_adjustment(isnan(vertical_adjustment)) = 0;
+    vertical_adjustment = nanmedian(seasonal_zbias(seasonal_id==3)); vertical_adjustment(isnan(vertical_adjustment)) = 0;
 end
 
 %vertical coregistration: optional use of transect-specific coregistration
@@ -325,6 +367,6 @@ h(1) = histogram(T.differences(T.season==3),'Normalization','pdf'); h(1).BinWidt
 h(2) = histogram(T.differences(T.season==4),'Normalization','pdf'); h(2).BinWidth = 0.5; h(2).FaceColor = seasonal_colors(1,:); h(2).FaceAlpha = 0.5; h(2).EdgeColor = seasonal_colors(1,:); h(2).LineWidth = 1; hold on;
 h(3) = histogram(T.differences(T.season==1),'Normalization','pdf'); h(3).BinWidth = 0.5; h(3).FaceColor = seasonal_colors(2,:); h(3).FaceAlpha = 0.5; h(3).EdgeColor = seasonal_colors(2,:); h(3). LineStyle = '--'; hold on;
 h(4) = histogram(T.differences(T.season==2),'Normalization','pdf'); h(4).BinWidth = 0.5; h(4).FaceColor = seasonal_colors(3,:); h(4).FaceAlpha = 0.5; h(4).EdgeColor = seasonal_colors(3,:); h(4).LineWidth = 1; h(4). LineStyle = ':'; hold on;
-set(gca,'fontsize',16,'xlim',[floor(nanmean(seasonal_bias)-3*nanstd(seasonal_bias)) ceil(nanmean(seasonal_bias)+3*nanstd(seasonal_bias))]); leg = legend(h,'summer','autumn','winter','spring');
+set(gca,'fontsize',16,'xlim',[floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)) ceil(nanmedian(seasonal_zbias)+3*1.4826*mad(seasonal_zbias,1))]); leg = legend(h,'summer','autumn','winter','spring');
 xlabel('Elevation residuals (m)'); ylabel('Count');
 saveas(gcf,[abbrev,'_elevation-residual_histograms.eps'],'epsc');

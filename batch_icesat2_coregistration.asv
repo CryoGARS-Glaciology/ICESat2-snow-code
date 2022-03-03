@@ -84,44 +84,43 @@ if ~isempty(output_shifts)
    load([abbrev,'-Abest.mat']); load([abbrev,'-RMSDbest.mat']); 
 end
 
-%identify the raw ICESat-2 data csv files (looped to filter bad transects)
+%identify the raw ICESat-2 data csv files
 for k = 1:2
-    cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
-    csvs = dir([acronym,'*.csv']); %if running more than once, rename original csvs to '*raw.csv' and change the search here to find files with that ending
-    for i = 1:length(csvs)
-        filenamelength(i) = length(csvs(i).name);
-    end
-    csvs(filenamelength>45) = []; %automatically ignore edited files (longer names)
-    clear filenamelength;
+cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
+csvs = dir([acronym,'*.csv']); %if running more than once, rename original csvs to '*raw.csv' and change the search here to find files with that ending
+for i = 1:length(csvs)
+    filenamelength(i) = length(csvs(i).name);
+end
+csvs(filenamelength>45) = []; %automatically ignore edited files (longer names)
+clear filenamelength;
+
+%identify unique dates from csv filesnames (each date can have up to 6 csvs)
+for i = 1:length(csvs)
+    csv_dates(i,:) = csvs(i).name(7:20);
+end
+[unique_dates,unique_refs,unique_inds] = unique(csv_dates,'rows');
+clear csv_dates;
+
+%check that you have enough good data for each data (delete if <3 points)
+if k == 1
+for i = 1:length(unique_refs)
+    %find all files with the same date
+    filerefs = find(unique_inds==i); 
     
-    %identify unique dates from csv filesnames (each date can have up to 6 csvs)
-    for i = 1:length(csvs)
-        csv_dates(i,:) = csvs(i).name(7:20);
+    %concatenate all files with the same date
+    t = [];
+    for j = 1:length(filerefs)
+        T = readtable(csvs(filerefs(j)).name); t = [t; T]; clear T;
     end
-    [unique_dates,unique_refs,unique_inds] = unique(csv_dates,'rows');
-    clear csv_dates;
     
-    %check that you have enough good data for each data (delete if <3 points)
-    if k == 1
-        for i = 1:length(unique_refs)
-            %find all files with the same date
-            filerefs = find(unique_inds==i);
-            
-            %concatenate all files with the same date
-            t = [];
-            for j = 1:length(filerefs)
-                T = readtable(csvs(filerefs(j)).name); t = [t; T]; clear T;
-            end
-            
-            %check number of observations & delete all files from that date if
-            %there are <3 observations (minimum needed to determine footprint)
-            if length(t.Elevation) <3
-                for j = 1:length(filerefs)
-                    delete(csvs(filerefs(j)).name);
-                end
-            end
+    %check number of observations & delete all files from that date if
+    %there are <3 observations (minimum needed to determine footprint)
+    if length(t.Elevation) <3
+        for j = 1:length(filerefs)
+            delete(csvs(filerefs(j)).name);
         end
     end
+end
 end
 
 %loop through the csvs & determine the horizontal offsets
@@ -136,6 +135,7 @@ for i = 1:length(unique_refs)
     
     %if analyzing ATL06 data for a glacier, select the most recent DEM
     if contains(acronym,'ATL06')
+%         clear DTM Ref;
 
         %convert datestamp to decimal dates
         yr = str2double(csvs(filerefs(1)).name(7:10));
@@ -158,7 +158,12 @@ for i = 1:length(unique_refs)
     
     %determine the map-view offset
     myFuncHandle = @(A)coregister_icesat2(ICESat2_files,DTM,Ref,A); %create the handle to call the coregistration function
-    [Abest(i,:),RMSDbest(i)] = fminsearch(myFuncHandle,[0,0]); %initial horizontal offset estimate = [0,0] = [0 m East, 0 m North]
+%     vals = readmatrix(ICESat2_file); %read in the csv to check its size
+%     if size(vals,1) > 1
+        [Abest(i,:),RMSDbest(i)] = fminsearch(myFuncHandle,[0,0]); %initial horizontal offset estimate = [0,0] = [0 m East, 0 m North]
+%     else
+%         Abest(i,:) = [NaN NaN]; RMSDbest(i) = NaN;
+%     end
     save([abbrev,'-Abest.mat'],'Abest','-v7.3'); save([abbrev,'-RMSDbest.mat'],'RMSDbest','-v7.3');
     fprintf('x-offset = %5.2f m & y-offset = %5.2f m w/ RMSD = %5.2f m \n',Abest(i,1),Abest(i,2),RMSDbest(i));
     clear vals;
@@ -182,7 +187,7 @@ for i = 1:length(unique_refs)
         %NOTE: vertical errors = ICESat2-reference so errors > 0 mean ICESat2
         %elevations are greater than the reference surface (possible snow signal)
         if length(t.Elevation) > 1
-            [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors(t,DTM,Ref);
+            [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors(ICESat2_files(j,:),DTM,Ref);
             fprintf('Median vertical bias after horizontal coregistration = %5.2f m \n',nanmedian(t.VerticalErrors));
         else
             t.ReferenceElevation = NaN; t.VerticalErrors = NaN;

@@ -80,24 +80,24 @@ for r = 1:length(theta)
     clear back_* front_*;
 end
 
-%plot (uncomment if you want to quality check
-if A(1) == 0 && A(2) == 0
-    figure; set(gcf,'position',[500 50 400 1200]);
-    pl(1) = plot(easts,norths,'.k','linewidth',1.5); axis xy equal; hold on;
-    for r = 1:length(theta)
-        pl(2) = plot([xc(r,:), xc(r,1)],[yc(r,:), yc(r,1)],'--b','linewidth',2); hold on;
-    end
-    leg = legend(pl,'RGT','footprints'); set(leg,'location','eastoutside');
-    answer = questdlg('Do the footprints look correct?',...
-        'Box Check',...
-        'Yes','No','No'); %third option is the default
-    switch answer
-        case 'Yes'
-            disp('moving on with coregistration...');
-        case 'No'
-            disp('FIX FOOTPRINT TRIG!'); return
-    end
-end
+% %plot (uncomment if you want to quality check
+% if A(1) == 0 && A(2) == 0
+%     figure; set(gcf,'position',[500 50 400 1200]);
+%     pl(1) = plot(easts,norths,'.k','linewidth',1.5); axis xy equal; hold on;
+%     for r = 1:length(theta)
+%         pl(2) = plot([xc(r,:), xc(r,1)],[yc(r,:), yc(r,1)],'--b','linewidth',2); hold on;
+%     end
+%     leg = legend(pl,'RGT','footprints'); set(leg,'location','eastoutside');
+%     answer = questdlg('Do the footprints look correct?',...
+%         'Box Check',...
+%         'Yes','No','No'); %third option is the default
+%     switch answer
+%         case 'Yes'
+%             disp('moving on with coregistration...');
+%         case 'No'
+%             disp('FIX FOOTPRINT TRIG!'); return
+%     end
+% end
 
 %define the reference elevation data
 x = R2.XWorldLimits(1)+0.5*R2.CellExtentInWorldX:R2.CellExtentInWorldX:R2.XWorldLimits(2)-0.5*R2.CellExtentInWorldX; 

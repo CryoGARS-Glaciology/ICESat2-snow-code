@@ -59,6 +59,7 @@ T = readtable([abbrev,'-ICESat2-',acronym,'-params.csv']);
 icesat2 = [csv_path,abbrev,'-ICESat2-',acronym,'-params.csv'];
 
 %determine whether this is a data update or a new data grab
+disp('Can be used to (1) add new data or (2) update existing data in table');
 prompt = 'Are you replacing terrain parameters with updated data (y/n)?';
 str = input(prompt,'s');
 

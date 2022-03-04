@@ -46,7 +46,7 @@ if contains(icesat2(1,:), 'ATL08') % ATL08 commands
     zmod = zmod(ib);
 end
 
-% % initialize empty matrices
+% initialize matrix for RGT orientations
 theta = NaN(length(norths),2);
 
 %create polygons of ICESat-2 footprints

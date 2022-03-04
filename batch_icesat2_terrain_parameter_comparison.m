@@ -55,8 +55,8 @@ disp('This may take a while, especially if using time-stamped reference data!');
 
 %load the ICESat-2 data table
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
-T = readtable([abbrev,'-ICESat2-',acronym,'-params.csv']);
 icesat2 = [csv_path,abbrev,'-ICESat2-',acronym,'-params.csv'];
+T = readtable(icesat2);
 
 %determine whether this is a data update or a new data grab
 disp('Can be used to (1) add new data or (2) update existing data in table');

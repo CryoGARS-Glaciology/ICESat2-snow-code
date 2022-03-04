@@ -1,8 +1,7 @@
-function [ztruth,differences,rmsez] = extract_icesat2_vertical_errors(T, elevations, R2)
+function [ztruth,differences,rmsez] = extract_icesat2_vertical_errors(icesat2, elevations, R2)
 % Function extract_icesat2_vertical_errors computes the vertical offsets
 % beteen horizontally-coregistered ICESat-2 tracks and a reference DTM
-% INPUTS: icesat2 = a csv file with icesat 2 elevations created using the
-%                       h5 to csv jupyter notebook
+% INPUTS: icesat2 = horizontally-coregistered csv file with icesat 2 elevations
 %              elevations = the matrix created using readgeoraster()
 %              R2 = the cell map refernce created as the second output in
 %                       readgeoraster()
@@ -16,9 +15,9 @@ function [ztruth,differences,rmsez] = extract_icesat2_vertical_errors(T, elevati
 
 %specify ICESat-2 footprint width & length
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
-if contains(icesat2(1,:), 'ATL08') % ATL08 commands
+if contains(icesat2, 'ATL08') % ATL08 commands
     default_length = 100; % approx. length of icesat2 shot footprint in meters
-elseif contains(icesat2(1,:), 'ATL06') % ATL06 commands
+elseif contains(icesat2, 'ATL06') % ATL06 commands
     default_length = 40; % approx. length of icesat2 shot footprint in meters
 end
 
@@ -27,6 +26,7 @@ end
 elevations(elevations > 10000) = nan; % throw out bad data (clouds)
 
 %if you have vertically coregistered the ICESat2 data, use the adjusted elevations
+T = readtable(icesat2);
 if ismember('Elevation_Coregistered', T.Properties.VariableNames)
     zmod = T.Elevation_Coregistered(:);
 else
@@ -36,7 +36,7 @@ easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
 
 % initialize empty matrices
-theta = zeros(size(norths),2); 
+theta = NaN(length(norths),2); 
 
 %create polygons of ICESat-2 footprints
 for r = 1:length(theta)

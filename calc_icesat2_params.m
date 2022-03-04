@@ -13,58 +13,53 @@ function [params, range, SDev] = calc_icesat2_params(icesat2, tif, R2)
 %            SDev = the standard deviation of the parameter in the
 %                   footprint
 
-% Created 30 November 2020 by Colten Elkin (coltenelkin@u.boisestate.edu)
-% Last modified 09 June 2021 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
+% last modified 03 March 2022 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
 
+%specify ICESat-2 footprint width & length
+footwidth = 11; % approx. width of icesat2 shot footprint in meters
+if contains(icesat2(1,:), 'ATL08') % ATL08 commands
+    default_length = 100; % approx. length of icesat2 shot footprint in meters
+elseif contains(icesat2(1,:), 'ATL06') % ATL06 commands
+    default_length = 40; % approx. length of icesat2 shot footprint in meters
+end
+
+%read the ICESat-2 data
 T = readtable(icesat2);
 easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
-footwidth = 11; % approx. width of icesat2 shot footprint in meters
 
-% initialize empty matrices
-theta = zeros(size(norths)); 
-xs = {};
-ys = {};
-xpoly = nan([1,5]);
-ypoly = nan([1,5]);
+% initialize matrix for RGT orientations
+theta = NaN(length(norths),2);
 
 %create polygons of ICESat-2 footprints
 for r = 1:length(theta)
-    if r == length(theta)
-        theta(r) = abs(atan((norths(r) - norths(r-1))/(easts(r) - easts(r-1)))); % trig to get angle theta along-track
-    else
-        theta(r) = abs(atan((norths(r+1) - norths(r))/(easts(r+1) - easts(r)))); % trig to get angle theta along-track
+    %calculate the footprint orientation
+    if r == 1  || end_flag(r)-end_flag(r-1) == 0 %only angle pointed forwards
+        theta(r,1) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r))); theta(r,2) = theta(r,1);
+        footlength = default_length;
+    elseif r == length(theta) || end_flag(r)-end_flag(r+1) == 0 %only angle pointed backwards
+        theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1))); theta(r,2) = theta(r,1);
+        footlength = default_length;
+    else %calculate angles in each direction
+        theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1)));
+        theta(r,2) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r)));
+        footlength = sqrt((norths(r+1)-norths(r-1)).^2 + (easts(r+1)-easts(r-1)).^2)/2;
     end
     
-    if contains(icesat2, 'ATL08') % ATL08 commands 
-        % get the x and y vectors to form the polygon
-        xpoly(1) = easts(r) + (footwidth/2) - footwidth/2*cos((pi/2) - theta(r)); % calculate the 4 corners in the x direction
-        xpoly(2) = easts(r) + (footwidth/2) + footwidth/2*cos((pi/2) - theta(r));
-        xpoly(3) = easts(r) - (footwidth/2) + footwidth/2*cos((pi/2) - theta(r));
-        xpoly(4) = easts(r) - (footwidth/2) - footwidth/2*cos((pi/2) - theta(r));
-        xs{r} = [xpoly(1), xpoly(2), xpoly(3), xpoly(4), xpoly(1)]; % save the corners as a vector in the x-es cell array
-        
-        ypoly(1) = norths(r) - 50 - footwidth/2*cos((pi/2) - theta(r)); % calculate the 4 corners in the y direction
-        ypoly(2) = norths(r) - 50 + footwidth/2*cos((pi/2) - theta(r));
-        ypoly(3) = norths(r) + 50 + footwidth/2*cos((pi/2) - theta(r));
-        ypoly(4) = norths(r) + 50 - footwidth/2*cos((pi/2) - theta(r));
-        ys{r} = [ypoly(1), ypoly(2), ypoly(3), ypoly(4), ypoly(1)]; % save the corners as a vector in the y-s cell array
-        
-    elseif contains(icesat2, 'ATL06') % ATL06 commands
-        % get the x and y vectors to form the polygon
-        xpoly(1) = easts(r) + (footwidth/2) - footwidth/2*cos((pi/2) - theta(r)); % calculate the 4 corners in the x direction
-        xpoly(2) = easts(r) + (footwidth/2) + footwidth/2*cos((pi/2) - theta(r));
-        xpoly(3) = easts(r) - (footwidth/2) + footwidth/2*cos((pi/2) - theta(r));
-        xpoly(4) = easts(r) - (footwidth/2) - footwidth/2*cos((pi/2) - theta(r));
-        xs{r} = [xpoly(1), xpoly(2), xpoly(3), xpoly(4), xpoly(1)]; % save the corners as a vector in the x-es cell array
-        
-        ypoly(1) = norths(r) - 20 - footwidth/2*cos((pi/2) - theta(r)); % calculate the 4 corners in the y direction
-        ypoly(2) = norths(r) - 20 + footwidth/2*cos((pi/2) - theta(r));
-        ypoly(3) = norths(r) + 20 + footwidth/2*cos((pi/2) - theta(r));
-        ypoly(4) = norths(r) + 20 - footwidth/2*cos((pi/2) - theta(r));
-        ys{r} = [ypoly(1), ypoly(2), ypoly(3), ypoly(4), ypoly(1)]; % save the corners as a vector in the y-s cell array
-        
-    end
+    %find box edges along the RGT
+    back_x = easts(r)-(footlength/2)*cosd(theta(r,1)); back_y = norths(r)-(footlength/2)*sind(theta(r,1));
+    front_x = easts(r)+(footlength/2)*cosd(theta(r,2)); front_y = norths(r)+(footlength/2)*sind(theta(r,2));
+    
+    %find box edges perpendicular to the centroid
+    xc(r,1) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))+90); yc(r,1) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))+90);
+    xc(r,4) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))-90); yc(r,4) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))-90);
+    
+    %solve for corner coordinates
+    xc(r,2) = back_x+(footwidth/2)*cosd(theta(r,1)+90); yc(r,2) = back_y+(footwidth/2)*sind(theta(r,1)+90);
+    xc(r,3) = back_x+(footwidth/2)*cosd(theta(r,1)-90); yc(r,3) = back_y+(footwidth/2)*sind(theta(r,1)-90);
+    xc(r,5) = front_x+(footwidth/2)*cosd(theta(r,2)-90); yc(r,5) = front_y+(footwidth/2)*sind(theta(r,2)-90);
+    xc(r,6) = front_x+(footwidth/2)*cosd(theta(r,2)+90); yc(r,6) = front_y+(footwidth/2)*sind(theta(r,2)+90);
+    clear back_* front_*;
 end
 
 %extract data from the input geotiff if over static terrain (ATL08) or from
@@ -74,21 +69,18 @@ if nargin == 3
     x = R2.XWorldLimits(1)+0.5*R2.CellExtentInWorldX:R2.CellExtentInWorldX:R2.XWorldLimits(end)-0.5*R2.CellExtentInWorldX; % get a vector of x coords
     y = R2.YWorldLimits(2)-0.5*R2.CellExtentInWorldY:-R2.CellExtentInWorldY:R2.YWorldLimits(1)+0.5*R2.CellExtentInWorldY; % get a vector of y coords
     [xgrid, ygrid] = meshgrid(x, y); % create grids of each of the x and y coords
-    parameter_report = NaN([1, length(xs)]);
+    parameter_report = NaN([1,length(xc)]);
     
     %identify the reference elevation points in each ICESat2 footprint
-    for t = 1:length(xs)
-        xv = xs{t}; % bounding box x vector
-        yv = ys{t}; % bounding box y vector
+    for k = 1:length(xc)
+        xv = [xc(k,:) xc(k,1)]; % bounding box x vector
+        yv = [yc(k,:) yc(k,1)]; % bounding box y vector
         
-        % first trimming
+        %data in the footprint
         in = inpolygon(xgrid, ygrid, xv, yv); % get logical array of in values
-        %     in2 = flip(in); % create a flipped in-grid (need row, column instead of column, row)
-        paramsin = tif(in); % identify parameter values in the footprint
+        paramsin = tif(in); % isolate parameter within the footprint
         if sum(sum(in)) > 0
-            parameter_report(t) = nanmean(paramsin);
-            range(t) = nanmax(paramsin) - nanmin(paramsin);
-            SDev(t) = nanstd(paramsin);
+            parameter_report(k) = nanmean(paramsin);
         end
         clear xv yv in paramsin;
     end
@@ -101,23 +93,21 @@ elseif nargin == 2
         DEMdate(k) = tif(k).deciyear;
     end
     parameter_report = NaN([1, length(xs)]);
-        
+    
     %identify the reference elevation points in each ICESat2 footprint for
     %the dataset with the closest preceding date
-    for t = 1:length(xs)
-        xv = xs{t}; % bounding box x vector
-        yv = ys{t}; % bounding box y vector
+    for k = 1:length(xc)
+        xv = [xc(k,:) xc(k,1)]; % bounding box x vector
+        yv = [yc(k,:) yc(k,1)]; % bounding box y vector
         
         %identify the appropriate terrain parameter dataset
-        yr_ref = find(DEMdate<=T.date(t),1,'last');
+        yr_ref = find(DEMdate<=T.date(k),1,'last');
         
         % data in the footprint
         in = inpolygon(tif(yr_ref).xgrid, tif(yr_ref).ygrid, xv, yv); % get logical array of in values
-        paramsin = tif(yr_ref).z(in); % identify parameter values in the footprint
+        paramsin = tif(yr_ref).z(in); % isolate parameter within the footprint
         if sum(sum(in)) > 0
-            parameter_report(t) = nanmean(paramsin);
-            range(t) = nanmax(paramsin) - nanmin(paramsin);
-            SDev(t) = nanstd(paramsin);
+            parameter_report(k) = nanmean(paramsin);
         end
         clear xv yv in paramsin yr_ref;
     end

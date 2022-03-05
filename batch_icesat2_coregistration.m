@@ -129,8 +129,8 @@ for k = 1:2
 end
 
 %loop through the csvs & determine the horizontal offsets
-tic;
 for i = 1:length(unique_refs)
+    tic;
     disp(['Coregistering data from date #',num2str(i),' of ',num2str(length(unique_refs)),' (',unique_dates(i,1:4),'/',unique_dates(i,5:6),'/',unique_dates(i,7:8),')']);
     %identify
     filerefs = find(unique_inds==i);
@@ -166,7 +166,7 @@ for i = 1:length(unique_refs)
     save([abbrev,'-Abest.mat'],'Abest','-v7.3'); save([abbrev,'-RMSDbest.mat'],'RMSDbest','-v7.3');
     fprintf('x-offset = %5.2f m & y-offset = %5.2f m w/ RMSD = %5.2f m \n',Abest(i,1),Abest(i,2),RMSDbest(i));
     clear vals;
-    toc; tic; %display processing time
+    toc; %display processing time
     
     %horizontally coregister & write the reference DTM and vertical offset values to the csv file
     for j = 1:length(filerefs)
@@ -182,9 +182,11 @@ for i = 1:length(unique_refs)
         if ~isnan(Abest(i,1))
             t.Northing = t.Northing+Abest(i,2); t.Easting = t.Easting+Abest(i,1);
         end
+        writetable(t,[csvs(filerefs(j)).name(1:end-4),'-edited.csv']);
+        
         %extract reference elevations and vertical errors
         if length(t.Elevation) > 1
-            [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors(t,DTM,Ref);
+            [t.ReferenceElevation,t.VerticalErrors,~] = extract_icesat2_vertical_errors([csvs(filerefs(j)).name(1:end-4),'-edited.csv'],DTM,Ref);
             fprintf('Median vertical bias after horizontal coregistration = %5.2f m \n',nanmedian(t.VerticalErrors));
         else
             t.ReferenceElevation = NaN; t.VerticalErrors = NaN;

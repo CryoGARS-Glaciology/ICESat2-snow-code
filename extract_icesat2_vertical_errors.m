@@ -77,7 +77,7 @@ else
     y = R2.YWorldLimits(1)+0.5*R2.CellExtentInWorldY:R2.CellExtentInWorldY:R2.YWorldLimits(2)-0.5*R2.CellExtentInWorldY; 
 end
 [xgrid, ygrid] = meshgrid(x, y); % create grids of each of the x and y coords
-elevation_report = zeros([1, length(xc)]);
+elevation_report = zeros([1, size(xc,1)]);
 
 %identify the reference elevation points in each ICESat2 footprint
 for k = 1:length(xc)

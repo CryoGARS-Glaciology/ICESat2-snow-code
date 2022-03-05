@@ -1,4 +1,4 @@
-function [params, range, SDev] = calc_icesat2_params(icesat2, tif, R2)
+function [params] = calc_icesat2_params(icesat2, tif, R2)
 % Function COREGISTER_ICESAT2 coregisters icesat-2 data with a corresponding digital
 % terrain model 
 % INPUTS: icesat2 = a csv file with icesat 2 elevations created using the
@@ -92,11 +92,11 @@ elseif nargin == 2
         [tif(k).xgrid, tif(k).ygrid] = meshgrid(tif(k).x, tif(k).y); % create grids of each of the x and y coords
         DEMdate(k) = tif(k).deciyear;
     end
-    parameter_report = NaN([1, length(xs)]);
+    parameter_report = NaN([1, size(xc,1)]);
     
     %identify the reference elevation points in each ICESat2 footprint for
     %the dataset with the closest preceding date
-    for k = 1:length(xc)
+    for k = 1:size(xc,1)
         xv = [xc(k,:) xc(k,1)]; % bounding box x vector
         yv = [yc(k,:) yc(k,1)]; % bounding box y vector
         

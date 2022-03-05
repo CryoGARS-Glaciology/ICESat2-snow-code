@@ -80,7 +80,7 @@ end
 elevation_report = zeros([1, size(xc,1)]);
 
 %identify the reference elevation points in each ICESat2 footprint
-for k = 1:length(xc)
+for k = 1:size(xc,1)
     xv = [xc(k,:) xc(k,1)]; % bounding box x vector
     yv = [yc(k,:) yc(k,1)]; % bounding box y vector
     

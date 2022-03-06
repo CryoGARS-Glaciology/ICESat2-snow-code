@@ -88,7 +88,27 @@ if ~isempty(output_shifts)
    load([abbrev,'-Abest.mat']); load([abbrev,'-RMSDbest.mat']); 
 end
 
-%identify the raw ICESat-2 data csv files (looped to filter bad transects)
+%transect csvs
+cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
+csvs = dir([acronym,'*.csv']); %if running more than once, rename original csvs to '*raw.csv' and change the search here to find files with that ending
+for i = 1:length(csvs)
+    filenamelength(i) = length(csvs(i).name);
+end
+csvs(filenamelength>45) = []; %automatically ignore edited files (longer names)
+clear filenamelength;
+
+%eliminate all short individual transects
+for i = 1:length(csvs)
+    T = readtable(csvs(i).name);
+    
+    %check number of observations & delete all files from that date if
+    %there are <3 observations (minimum needed to determine footprint)
+    if length(T.Elevation) < 3
+        delete(csvs(i).name);
+    end
+end
+
+%identify the raw ICESat-2 data csv files (looped to filter bad dates)
 for k = 1:2
     cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
     csvs = dir([acronym,'*.csv']); %if running more than once, rename original csvs to '*raw.csv' and change the search here to find files with that ending
@@ -107,6 +127,7 @@ for k = 1:2
     
     %check that you have enough good data for each data (delete if <3 points)
     if k == 1
+        %concatenated dates
         for i = 1:length(unique_refs)
             %find all files with the same date
             filerefs = find(unique_inds==i);

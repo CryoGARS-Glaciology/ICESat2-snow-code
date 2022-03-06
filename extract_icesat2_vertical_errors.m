@@ -36,15 +36,15 @@ easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
 
 % initialize empty matrices
-theta = NaN(length(norths),2); 
+theta = NaN(size(norths,1),2); 
 
 %create polygons of ICESat-2 footprints
-for r = 1:length(theta)
+for r = 1:size(theta,1)
     %calculate the footprint orientation
     if r == 1 %only angle pointed forwards
         theta(r,1) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r))); theta(r,2) = theta(r,1);
         footlength = default_length;
-    elseif r == length(theta) %only angle pointed backwards
+    elseif r == size(theta,1) %only angle pointed backwards
         theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1))); theta(r,2) = theta(r,1);
         footlength = default_length;
     else %calculate angles in each direction

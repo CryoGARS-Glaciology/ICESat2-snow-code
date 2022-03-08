@@ -60,8 +60,10 @@ T = readtable(icesat2);
 
 %determine whether this is a data update or a new data grab
 disp('Can be used to (1) add new data or (2) update existing data in table');
-prompt = 'Are you replacing terrain parameters with updated data (y/n)?';
-str = input(prompt,'s');
+answer = questdlg('Why are you extracting terrain parameters?','Terrain Parameter Pull',...
+    'Adding new data','Replacing old data','Adding new data');
+% prompt = 'Are you replacing terrain parameters with updated data (y/n)?';
+% str = input(prompt,'s');
 
 %pull metrics for each terrain parameter
 for i = 1:length(terrain_params)
@@ -70,36 +72,39 @@ for i = 1:length(terrain_params)
     cd_to_DTM = ['cd ',TP_path]; eval(cd_to_DTM);
     
     %if adding the terrain parameter for the first time
-    if contains(str,'n')
-        if ~ismember(char(terrain_params(i)), T.Properties.VariableNames)
-            if contains(TP_name,'.tif')
-                tifs = dir('*.tif');
-                for j = 1:length(tifs)
-                    if contains(tifs(j).name,char(terrain_params(i)))
-                        disp(['Extracting stats for ',char(terrain_params(i))]);
-                        [tif,R2] = readgeoraster(tifs(j).name);
-                        [params,~,~] = calc_icesat2_params(icesat2, tif, R2);
-                        params(params==-9999) = NaN;
-                        T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
-                        clear params tif R2;
+    %     if contains(str,'n')
+    switch answer
+        case 'Adding new data'
+            if ~ismember(char(terrain_params(i)), T.Properties.VariableNames)
+                if contains(TP_name,'.tif')
+                    tifs = dir('*.tif');
+                    for j = 1:length(tifs)
+                        if contains(tifs(j).name,char(terrain_params(i)))
+                            disp(['Extracting stats for ',char(terrain_params(i))]);
+                            [tif,R2] = readgeoraster(tifs(j).name);
+                            params = calc_icesat2_params(icesat2, tif, R2);
+                            params(params==-9999) = NaN;
+                            T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
+                            clear params tif R2;
+                        end
                     end
-                end
-            elseif contains(TP_name,'.mat')
-                mats = dir('*.mat');
-                for j = 1:length(mats)
-                    if contains(mats(j).name,char(terrain_params(i)))
-                        disp(['Extracting stats for ',char(terrain_params(i))]);
-                        load(mats(j).name); %load the concatenated matfile
-                        [params,~,~] = calc_icesat2_params(icesat2, Z);
-                        params(params==-9999) = NaN;
-                        T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
-                        clear params tif R2;
+                elseif contains(TP_name,'.mat')
+                    mats = dir('*.mat');
+                    for j = 1:length(mats)
+                        if contains(mats(j).name,char(terrain_params(i)))
+                            disp(['Extracting stats for ',char(terrain_params(i))]);
+                            load(mats(j).name); %load the concatenated matfile
+                            params = calc_icesat2_params(icesat2, Z);
+                            params(params==-9999) = NaN;
+                            T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
+                            clear params tif R2;
+                        end
                     end
                 end
             end
-        end
-    else
-        if contains(TP_name,'.tif')
+            %     else
+        case 'Replacing old data'
+            if contains(TP_name,'.tif')
                 tifs = dir('*.tif');
                 for j = 1:length(tifs)
                     if contains(tifs(j).name,char(terrain_params(i)))

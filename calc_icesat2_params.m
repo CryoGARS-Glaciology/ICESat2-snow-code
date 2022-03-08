@@ -1,6 +1,6 @@
 function [params] = calc_icesat2_params(icesat2, tif, R2)
-% Function COREGISTER_ICESAT2 coregisters icesat-2 data with a corresponding digital
-% terrain model 
+% Function calc_icesat2_params extracts a specified terrain parameter from
+% ICESat-2 footprints
 % INPUTS: icesat2 = a csv file with icesat 2 elevations created using the
 %                       h5 to csv jupyter notebook
 %             tif = the reference matrix or structure of the terrain
@@ -9,9 +9,6 @@ function [params] = calc_icesat2_params(icesat2, tif, R2)
 % OUTPUTS: params = the terrain parameter from the tif averaged over the
 %                   bounding box of the icesat2 footprint. Reported as a
 %                   column vector matching the icesat2 input points
-%           range = the range (max - min) of the parameter in the footprint
-%            SDev = the standard deviation of the parameter in the
-%                   footprint
 
 % last modified 03 March 2022 by Ellyn Enderlin (ellynenderlin@boisestate.edu)
 
@@ -27,6 +24,13 @@ end
 T = readtable(icesat2);
 easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
+
+%identify the ends of each transect and flag them so that neighboring
+%transects aren't used when constructing footprints (use beam variable & date)
+beams = T.beam; dates = T.date;
+[~,unique_refs] = unique([num2str(dates),string(beams)],'rows');
+end_flag = zeros(size(norths,1),1);
+end_flag(unique_refs) = 1; end_flag(unique_refs(unique_refs~=1)-1) = 1; end_flag(end) = 1;
 
 % initialize matrix for RGT orientations
 theta = NaN(size(norths,1),2);

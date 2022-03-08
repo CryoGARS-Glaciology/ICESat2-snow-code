@@ -363,6 +363,11 @@ for i = 1:length(csvs)
         decidate = (cumdays_norm(str2double(csvs(i).name(11:12)))+str2double(csvs(i).name(13:14)))/sum(modays_norm);
     end
     t.date = repmat(yr+decidate,size(t.Elevation));
+    
+    
+    %extract beam info from the file name and add to concatenated file
+    t.beam = repmat(csvs(i).name(end-14:end-11),size(t.Elevation));
+    
 
     %coregister using median from best snow-free observations identified above
     %if snow is confidently flagged, uncomment if statement for ATL08 to

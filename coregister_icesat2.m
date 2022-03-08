@@ -46,6 +46,7 @@ if contains(icesat2(1,:), 'ATL08') % ATL08 commands
     zmod = zmod(ib);
     end_flag = end_flag(ib);
 end
+end_flag(end) = 1;
 
 % initialize matrix for RGT orientations
 theta = NaN(size(norths,1),2);

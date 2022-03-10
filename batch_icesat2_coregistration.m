@@ -31,8 +31,8 @@ clearvars; close all;
 addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
 
 %DTM (be sure the path ends in a /)
-DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
-DTM_name = 'WG-DEM-timeseries.mat';
+DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/DEMs/';
+DTM_name = 'RCEW_1m_WGS84UTM11_WGS84.tif';
 if contains(DTM_name,'.tif')
     DTM_date = '20071114'; %only need to enter datestring in file name if the reference elevation map is a geotiff
 else
@@ -40,16 +40,16 @@ else
 end
 
 %ROI polygon in UTM coordinates (not necessary for ATL08 data)
-S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/ROIs/Wolverine-2018-outline-UTM06N.shp'); %glacier outline if using ATL06
+S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/ROIs/RCEW-outline_WGS84-UTM11N.shp'); %glacier outline if using ATL06
 
 %csv (be sure the path ends in a /)
-csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/csvs/';
+csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/csvs/';
 
 %site abbreviation for file names
-abbrev = 'WG'; 
+abbrev = 'RCEW'; 
 
 %ICESat-2 product acronym
-acronym = 'ATL06';
+acronym = 'ATL08';
 
 %if ATL06 equilbrium line altitude or typical late summer snowline
 %if ATL08 typical rain-snow transition line in catchment (need for coregistration if not enough summer data)

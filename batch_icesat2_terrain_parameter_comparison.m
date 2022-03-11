@@ -8,8 +8,8 @@
 %5) Site abbreviation used for compiled outputs
 %6) ICESat-2 data acronym (e.g., ATL06, ATL08)
 %7) Path with filename for glacier outline (if working with ATL06 data)
-%8) Parameter files (set-up for slope, aspect, & ruggedness geotiffs
-%produced from the reference DTM using QGIS build-in functions)
+%8) Parameter files (slope & aspect geotiffs made with create_terrainparam_tifs.m and 
+%ruggedness geotiff produced from the reference DTM using QGIS build-in functions)
 
 %Outputs: 
 %1) Appended csv file that includes the specified terrain parameter for
@@ -24,17 +24,17 @@ clearvars; close all;
 addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
 
 %terrain parameter file (be sure the path ends in a /)
-TP_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
-TP_name = 'WG-DEM-timeseries.mat'; %list the DEM name and it will find all associated terrain param files
+TP_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/DEMs/';
+TP_name = 'RCEW_1m_WGS84UTM11_WGS84.tif'; %list the DEM name and it will find all associated terrain param files
 
 %site concanated csv (be sure the path ends in a /)
-csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/csvs/';
+csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/csvs/';
 
 %site abbreviation for file names
-abbrev = 'WG'; 
+abbrev = 'RCEW'; 
 
 %ICESat-2 product acronym
-acronym = 'ATL06';
+acronym = 'ATL08';
 
 %recommended terrain parameters to add to the table
 if contains(acronym,'ATL08')
@@ -61,20 +61,17 @@ T = readtable(icesat2);
 %determine whether this is a data update or a new data grab
 disp('Can be used to (1) add new data or (2) update existing data in table');
 answer = questdlg('Why are you extracting terrain parameters?','Terrain Parameter Pull',...
-    'Adding new data','Replacing old data','Adding new data');
-% prompt = 'Are you replacing terrain parameters with updated data (y/n)?';
-% str = input(prompt,'s');
+    '1) Adding new data','2) Replacing old data','1) Adding new data');
 
 %pull metrics for each terrain parameter
 for i = 1:length(terrain_params)
     
     %load the terrain parameters & extract metrics
-    cd_to_DTM = ['cd ',TP_path]; eval(cd_to_DTM);
+    cd(TP_path);
     
     %if adding the terrain parameter for the first time
-    %     if contains(str,'n')
     switch answer
-        case 'Adding new data'
+        case '1) Adding new data'
             if ~ismember(char(terrain_params(i)), T.Properties.VariableNames)
                 if contains(TP_name,'.tif')
                     tifs = dir('*.tif');
@@ -103,7 +100,7 @@ for i = 1:length(terrain_params)
                 end
             end
             %     else
-        case 'Replacing old data'
+        case '2) Replacing old data'
             if contains(TP_name,'.tif')
                 tifs = dir('*.tif');
                 for j = 1:length(tifs)

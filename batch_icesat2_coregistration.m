@@ -321,7 +321,9 @@ for i = 1:length(DEMdate)
         hp(j) = histogram(seasonal_zbias(seasonal_id==j & seasonal_zref<=snowline & seasonal_yrref == DEMdate(i)),[floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)):1:ceil(nanmedian(seasonal_zbias)+3*1.4826*mad(seasonal_zbias,1))],'Normalization','pdf'); hp(j).FaceColor = seasonal_colors(j,:); hold on;
     end
     set(gca,'fontsize',16); ylims = get(gca,'ylim');
-    text(floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)),max(ylims)-0.05*range(ylims),[' Year: ',num2str(floor(DEMdate(i))),'-',num2str(ceil(DEMdate(i)))],'fontsize',14);
+    if length(DEMdate) > 1
+        text(floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)),max(ylims)-0.05*range(ylims),[' Year: ',num2str(floor(DEMdate(i))),'-',num2str(ceil(DEMdate(i)))],'fontsize',14);
+    end
 if i == 1;
 title('Off-ice elevation differences before vertical coregistration');
 end

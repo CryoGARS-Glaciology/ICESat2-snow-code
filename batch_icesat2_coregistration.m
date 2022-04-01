@@ -31,8 +31,8 @@ clearvars; close all;
 addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
 
 %DTM (be sure the path ends in a /)
-DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/DEMs/';
-DTM_name = 'RCEW_1m_WGS84UTM11_WGS84.tif';
+DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
+DTM_name = 'WG-DEM-timeseries.mat';
 if contains(DTM_name,'.tif')
     DTM_date = '20071114'; %only need to enter datestring in file name if the reference elevation map is a geotiff
 else
@@ -40,16 +40,16 @@ else
 end
 
 %ROI polygon in UTM coordinates (not necessary for ATL08 data)
-S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/ROIs/RCEW-outline_WGS84-UTM11N.shp'); %glacier outline if using ATL06
+S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/ROIs/Wolverine-2018-outline-UTM06N.shp'); %glacier outline if using ATL06
 
 %csv (be sure the path ends in a /)
-csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/csvs/';
+csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/csvs/';
 
 %site abbreviation for file names
-abbrev = 'RCEW'; 
+abbrev = 'WG'; 
 
 %ICESat-2 product acronym
-acronym = 'ATL08';
+acronym = 'ATL06';
 
 %if ATL06 equilbrium line altitude or typical late summer snowline
 %if ATL08 typical rain-snow transition line in catchment (need for coregistration if not enough summer data)
@@ -305,7 +305,7 @@ for i = 1:length(csvs)
         seasonal_zref = [seasonal_zref; vert_bias_refz];
         clear vert_bias* in;
     end
-    writetable(t,csvs(i).name);
+%     writetable(t,csvs(i).name);
     clear t;
 end
 
@@ -324,9 +324,7 @@ for i = 1:length(DEMdate)
     if length(DEMdate) > 1
         text(floor(nanmedian(seasonal_zbias)-3*1.4826*mad(seasonal_zbias,1)),max(ylims)-0.05*range(ylims),[' Year: ',num2str(floor(DEMdate(i))),'-',num2str(ceil(DEMdate(i)))],'fontsize',14);
     end
-if i == 1;
-title('Off-ice elevation differences before vertical coregistration');
-end
+    if i == 1; title('Off-ice elevation differences before vertical coregistration'); end
 end
 xlabel('Elevation difference (m)','fontsize',16); ylabel('Probability density','fontsize',16);
 leg = legend(hp,'winter','spring','summer','autumn');
@@ -334,8 +332,8 @@ leg = legend(hp,'winter','spring','summer','autumn');
 sum_sigtest = kstest2(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline),seasonal_zbias(seasonal_id==3));
 if sum_sigtest == 1
     disp('Summer elevation residuals are significantly different than spring residuals below the snowline:');
-    fprintf('Summer median +/- MAD errors are %3.2f +/- %3.2f m\n',nanmedian(seasonal_zbias(seasonal_id==3)),mad(seasonal_zbias(seasonal_id==3),1));
-    fprintf('Spring below-snowline median +/- MAD errors are %3.2f +/- %3.2f m\n',...
+    fprintf('Summer median +/- MAD errors are %3.2f +/- %3.2f m \n',nanmedian(seasonal_zbias(seasonal_id==3 & seasonal_zref<=snowline)),mad(seasonal_zbias(seasonal_id==3 & seasonal_zref<=snowline),1));
+    fprintf('Spring  median +/- MAD errors are %3.2f +/- %3.2f m \n',...
         nanmedian(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline)),mad(seasonal_zbias(seasonal_id==2 & seasonal_zref<=snowline),1));
 end
 %user makes the decision to use summer or spring data based on plots & significance testing

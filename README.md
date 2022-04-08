@@ -9,6 +9,7 @@ These codes were executed using Matlab 2020b and should work with comparable ver
 
 # Execution
 Detailed instructions will be provided shortly...
+1) write_icesat2_csv: converts downloaded hdf5 files to csvs, extracting basic parameters (x,y,z, etc)
 
 # Outputs
 1) Each ICESat-2 hdf5 file (each file is typically one date-stamped track) is converted to a csv file that contain only the most basic variables from the hdf5 file. The x,y,z coordinates in each csv file are adjusted so that the data are coregistered with respect to a reference digital terrain model, with a new csv file produced with the name appended with "-edited". The csv data are organized in a table, with the first row containing descriptive names for the columns.

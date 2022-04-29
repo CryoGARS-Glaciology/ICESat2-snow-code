@@ -9,6 +9,7 @@ function [xc,yc,theta] = ICESat2_FootprintCorners(norths,easts,ATL0X,end_flag)
 % OUTPUTS:
 %   xc = x corner coordinates
 %   yc = y corner coordinates
+%   theta = angle theta between the icesat2 track and due east
 
 %specify ICESat-2 footprint width & length
 footwidth = 11; % approx. width of icesat2 shot footprint in meters

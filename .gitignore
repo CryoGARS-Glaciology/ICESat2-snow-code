@@ -9,3 +9,6 @@
 
 # Ignore all csv files
 *.csv
+
+# Ignore RCEW_DEM directory
+**/RCEW_DEM/

@@ -1,3 +1,11 @@
 # Ignore Mac system files
 .DS_store
 
+# Ignore all text files
+*.txt
+
+# Ignore all fig files
+*.fig
+
+# Ignore all csv files
+*.csv

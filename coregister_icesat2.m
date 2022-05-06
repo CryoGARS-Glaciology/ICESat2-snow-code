@@ -1,8 +1,9 @@
 function rmsez = coregister_icesat2(icesat2, elevations, R2, A)
-% Function COREGISTER_ICESAT2 coregisters icesat-2 data with a corresponding digital
-% terrain model 
-% INPUTS: icesat2 = csv file(s) with icesat 2 elevations created using the
-%                       h5 to csv jupyter notebook
+% Function COREGISTER_ICESAT2 calculates the root mean square error in
+% elevation for all the ICESat-2 segments in a track, using the mean
+% elevation from each segment (T.Elevation) and the mean of the reference
+% elevation dataset for the same footprint.
+% INPUTS: icesat2 = csv file(s) with ICESat-2 data saved as column vectors
 %      elevations = the reference elevation matrix 
 %              R2 = the cell map reference for the reference DTM
 %               A = a [2 1] vector that serves as the spatial offsets in
@@ -17,8 +18,10 @@ function rmsez = coregister_icesat2(icesat2, elevations, R2, A)
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
 if contains(icesat2(1,:), 'ATL08') % ATL08 commands
     default_length = 100; % approx. length of icesat2 shot footprint in meters
+    ATL0X = 8; %dataset flag for footprint delineation
 elseif contains(icesat2(1,:), 'ATL06') % ATL06 commands
     default_length = 40; % approx. length of icesat2 shot footprint in meters
+    ATL0X = 6; %dataset flag for footprint delineation
 end
 
 %filter reference DTM elevations
@@ -48,39 +51,8 @@ if contains(icesat2(1,:), 'ATL08') % ATL08 commands
 end
 end_flag(end) = 1;
 
-% initialize matrix for RGT orientations
-theta = NaN(size(norths,1),2);
-
-%create polygons of ICESat-2 footprints
-for r = 1:size(theta,1)
-    %calculate the footprint orientation
-    if r == 1  || end_flag(r)-end_flag(r-1) == 0 %only angle pointed forwards
-        theta(r,1) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r))); theta(r,2) = theta(r,1);
-        footlength = default_length;
-    elseif r == size(theta,1) || end_flag(r)-end_flag(r+1) == 0 %only angle pointed backwards
-        theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1))); theta(r,2) = theta(r,1);
-        footlength = default_length;
-    else %calculate angles in each direction
-        theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1)));
-        theta(r,2) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r)));
-        footlength = sqrt((norths(r+1)-norths(r-1)).^2 + (easts(r+1)-easts(r-1)).^2)/2;
-    end
-    
-    %find box edges along the RGT
-    back_x = A(1)+easts(r)-(footlength/2)*cosd(theta(r,1)); back_y = A(2)+norths(r)-(footlength/2)*sind(theta(r,1));
-    front_x = A(1)+easts(r)+(footlength/2)*cosd(theta(r,2)); front_y = A(2)+norths(r)+(footlength/2)*sind(theta(r,2));
-    
-    %find box edges perpendicular to the centroid
-    xc(r,1) = A(1)+easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))+90); yc(r,1) = A(2)+norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))+90);
-    xc(r,4) = A(1)+easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))-90); yc(r,4) = A(2)+norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))-90);
-    
-    %solve for corner coordinates
-    xc(r,2) = back_x+(footwidth/2)*cosd(theta(r,1)+90); yc(r,2) = back_y+(footwidth/2)*sind(theta(r,1)+90);
-    xc(r,3) = back_x+(footwidth/2)*cosd(theta(r,1)-90); yc(r,3) = back_y+(footwidth/2)*sind(theta(r,1)-90);
-    xc(r,5) = front_x+(footwidth/2)*cosd(theta(r,2)-90); yc(r,5) = front_y+(footwidth/2)*sind(theta(r,2)-90);
-    xc(r,6) = front_x+(footwidth/2)*cosd(theta(r,2)+90); yc(r,6) = front_y+(footwidth/2)*sind(theta(r,2)+90);
-    clear back_* front_*;
-end
+%create polygons of ICESat-2 segments
+[xc,yc,~] = ICESat2_FootprintCorners(norths,easts,ATL0X,end_flag);
 
 % %plot (uncomment if you want to quality check
 % if A(1) == 0 && A(2) == 0
@@ -89,8 +61,8 @@ end
 %     for r = 1:length(theta)
 %         pl(2) = plot([xc(r,:), xc(r,1)],[yc(r,:), yc(r,1)],'--b','linewidth',2); hold on;
 %     end
-%     leg = legend(pl,'RGT','footprints'); set(leg,'location','eastoutside');
-%     answer = questdlg('Do the footprints look correct?',...
+%     leg = legend(pl,'RGT','segments'); set(leg,'location','eastoutside');
+%     answer = questdlg('Do the segments look correct?',...
 %         'Box Check',...
 %         'Yes','No','No'); %third option is the default
 %     switch answer

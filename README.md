@@ -9,7 +9,15 @@ These codes were executed using Matlab 2020b and should work with comparable ver
 
 # Execution
 Detailed instructions will be provided shortly...
-1) write_icesat2_csv: converts downloaded hdf5 files to csvs, extracting basic parameters (x,y,z, etc)
+1) nsidc-data-download.py: Downloads ICESat-2 hdf5 files from NSIDC using Earthdata credentials after specifying location, dataset, and time period.
+2) batch_icesat2_h5_to_csv.mlx: Extracts basic parameters (x,y,z, etc) from hdf5 files and creates csvs. Calls write_icesat2_csv.m and wgs2utm.m.
+4) batch_icesat2_coregistration.m
+5) create_terrainparam_tifs.m
+6) batch_icesat2_terrain_parameter_comparison.m
+
+Depending on the reference digital terrain models that you have for your study site, you may need to run several other codes. 
+1) calculate_DTM_geoidheights.m: Use if reference elevations are with respect to the geoid. ICEsat-2 x,y,z data are with respect to the WGS84 ellipsoid. Datum reprojection in GDAL is more accurate and is preferred.
+2) concatenate_glacier_DEM_timeseries.m: Use if you have timeseries of reference elevations and associated terrain parameters, such as slope and aspect, that you want to use in your analysis. Glacier sites should ideally have annual end-of-melt-season reference elevation datasets that should be concatenated using this code.
 
 # Outputs
 1) Each ICESat-2 hdf5 file (each file is typically one date-stamped track) is converted to a csv file that contain only the most basic variables from the hdf5 file. The x,y,z coordinates in each csv file are adjusted so that the data are coregistered with respect to a reference digital terrain model, with a new csv file produced with the name appended with "-edited". The csv data are organized in a table, with the first row containing descriptive names for the columns.

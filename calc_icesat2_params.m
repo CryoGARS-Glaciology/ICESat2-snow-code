@@ -1,11 +1,9 @@
 function [params] = calc_icesat2_params(icesat2, tif, R2)
-% Function calc_icesat2_params extracts a specified terrain parameter from
-% ICESat-2 footprints
-% INPUTS: icesat2 = a csv file with icesat 2 elevations created using the
-%                       h5 to csv jupyter notebook
-%             tif = the reference matrix or structure of the terrain
-%                       parameter (slope, aspect, etc)
-%              R2 = the cell map reference
+% Function CALC_ICESAT2_PARAMS extracts a specified terrain parameter from
+% ICESat-2 segments.
+% INPUTS: icesat2 = csv file(s) with ICESat-2 data saved as column vectors
+%      elevations = the reference elevation matrix 
+%              R2 = the cell map reference for the reference DTM
 % OUTPUTS: params = the terrain parameter from the tif averaged over the
 %                   bounding box of the icesat2 footprint. Reported as a
 %                   column vector matching the icesat2 input points
@@ -16,8 +14,10 @@ function [params] = calc_icesat2_params(icesat2, tif, R2)
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
 if contains(icesat2(1,:), 'ATL08') % ATL08 commands
     default_length = 100; % approx. length of icesat2 shot footprint in meters
+    ATL0X = 8; %dataset flag for footprint delineation
 elseif contains(icesat2(1,:), 'ATL06') % ATL06 commands
     default_length = 40; % approx. length of icesat2 shot footprint in meters
+    ATL0X = 6; %dataset flag for footprint delineation
 end
 
 %read the ICESat-2 data
@@ -26,45 +26,14 @@ easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
 
 %identify the ends of each transect and flag them so that neighboring
-%transects aren't used when constructing footprints (use beam variable & date)
+%transects aren't used when constructing segments (use beam variable & date)
 beams = T.beam; dates = T.date;
 [~,unique_refs] = unique([num2str(dates),string(beams)],'rows');
 end_flag = zeros(size(norths,1),1);
 end_flag(unique_refs) = 1; end_flag(unique_refs(unique_refs~=1)-1) = 1; end_flag(end) = 1;
 
-% initialize matrix for RGT orientations
-theta = NaN(size(norths,1),2);
-
-%create polygons of ICESat-2 footprints
-for r = 1:size(theta,1)
-    %calculate the footprint orientation
-    if r == 1  || end_flag(r)-end_flag(r-1) == 0 %only angle pointed forwards
-        theta(r,1) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r))); theta(r,2) = theta(r,1);
-        footlength = default_length;
-    elseif r == size(theta,1) || end_flag(r)-end_flag(r+1) == 0 %only angle pointed backwards
-        theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1))); theta(r,2) = theta(r,1);
-        footlength = default_length;
-    else %calculate angles in each direction
-        theta(r,1) = atan2d((norths(r)-norths(r-1)),(easts(r)-easts(r-1)));
-        theta(r,2) = atan2d((norths(r+1)-norths(r)),(easts(r+1)-easts(r)));
-        footlength = sqrt((norths(r+1)-norths(r-1)).^2 + (easts(r+1)-easts(r-1)).^2)/2;
-    end
-    
-    %find box edges along the RGT
-    back_x = easts(r)-(footlength/2)*cosd(theta(r,1)); back_y = norths(r)-(footlength/2)*sind(theta(r,1));
-    front_x = easts(r)+(footlength/2)*cosd(theta(r,2)); front_y = norths(r)+(footlength/2)*sind(theta(r,2));
-    
-    %find box edges perpendicular to the centroid
-    xc(r,1) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))+90); yc(r,1) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))+90);
-    xc(r,4) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))-90); yc(r,4) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))-90);
-    
-    %solve for corner coordinates
-    xc(r,2) = back_x+(footwidth/2)*cosd(theta(r,1)+90); yc(r,2) = back_y+(footwidth/2)*sind(theta(r,1)+90);
-    xc(r,3) = back_x+(footwidth/2)*cosd(theta(r,1)-90); yc(r,3) = back_y+(footwidth/2)*sind(theta(r,1)-90);
-    xc(r,5) = front_x+(footwidth/2)*cosd(theta(r,2)-90); yc(r,5) = front_y+(footwidth/2)*sind(theta(r,2)-90);
-    xc(r,6) = front_x+(footwidth/2)*cosd(theta(r,2)+90); yc(r,6) = front_y+(footwidth/2)*sind(theta(r,2)+90);
-    clear back_* front_*;
-end
+%create polygons of ICESat-2 segments
+[xc,yc,~] = ICESat2_FootprintCorners(norths,easts,ATL0X,end_flag);
 
 %extract data from the input geotiff if over static terrain (ATL08) or from
 %the geotiff timeseries if over a temporally-evolving surface (ATL06)

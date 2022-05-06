@@ -6,6 +6,7 @@
 
 %% Inputs
 clearvars; close all;
+addpath(['./functions']) 
 
 %DTM (be sure the path ends in a /)
 DTM_path = 'RCEW_DEM/';
@@ -15,7 +16,7 @@ if contains(DTM_name,'.tif')
 end
 
 %csv (be sure the path ends in a /)
-csv_path = '/Users/karinazikan/Desktop/ICESat_2/TestData/';
+csv_path = '/Users/karinazikan/Documents/ICESat2-snow-code/';
 
 %site abbreviation for file names
 abbrev = 'RCEW';
@@ -54,11 +55,15 @@ elevations(elevations > 10000) = nan; % more trash takeout
 
 %load the ICESat-2 data
 T = table; %create a table
-for i = 1:length(csvs)
-    icesat2 = [csv_path,'RCEW-ICESat2-ATL08-params']; %compile the file name
-    file = readtable(icesat2); %read in files
-    T = [T; file]; %combine tables
-end
+% for i = 1:length(csvs)
+%     icesat2 = [csv_path,'RCEW-ICESat2-ATL08-params']; %compile the file name
+%     file = readtable(icesat2); %read in files
+%     T = [T; file]; %combine tables
+% end
+icesat2 = [csv_path,'RCEW-ICESat2-ATL08-params']; %compile the file name
+file = readtable(icesat2); %read in files
+T = [T; file];
+
 T = T([1:250],:);
 zmod = T.Elevation(:); % save the median 'model' elevations (icesat-2 elevations)
 zmodfit = T.Elevation_bestfit(:); % save the fitted 'model' elevations (icesat-2 elevations_bestfit)
@@ -82,9 +87,10 @@ if contains(icesat2, 'ATL08') % ATL08 commands
     easts = easts(ib);
     norths = norths(ib);
     zmod = zmod(ib);
+    zmodfit = zmodfit(ib);
 end
 
-cd '/Users/karinazikan/Desktop/ICESat_2'
+cd '/Users/karinazikan/Documents/ICESat2-snow-code'
 
 %% Calculating footprints and reference elevation for each data point
 %define the Reference elevation data
@@ -185,6 +191,13 @@ Dfitmean = nanmean(differencesfit); % calculate mean of fit diferences
 Dfitstd = std(differencesfit,'omitnan'); % calculate std of diferences
 zfitrmse = sqrt(nansum((differencesfit).^2)./length(differencesfit)); %calculate rmse of fit differeces
 
+% Removing residuals below -13
+ix = find(differences < -13);
+zmod(ix) = NaN;
+differences(ix) = NaN;
+ix = find(differencesfit < -13);
+zmodfit(ix) = NaN;
+differencesfit(ix) = NaN;
 %% Plots
 % 1-1 plots
 fig1 = figure(1); clf %create figure 1

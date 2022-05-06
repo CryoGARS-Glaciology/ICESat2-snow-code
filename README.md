@@ -11,9 +11,9 @@ These codes were executed using Matlab 2020b and should work with comparable ver
 Detailed instructions will be provided shortly...
 1) nsidc-data-download.py: Downloads ICESat-2 hdf5 files from NSIDC using Earthdata credentials after specifying location, dataset, and time period.
 2) batch_icesat2_h5_to_csv.mlx: Extracts basic parameters (x,y,z, etc) from hdf5 files and creates csvs. Calls write_icesat2_csv.m and wgs2utm.m.
-4) batch_icesat2_coregistration.m
-5) create_terrainparam_tifs.m
-6) batch_icesat2_terrain_parameter_comparison.m
+4) batch_icesat2_coregistration.m: Specify site-specific parameters in the top section, then run the coregistration section to calculate horizontal coregistration offsets using a gradient descent approach and extract elevations from the reference elevation dataset(s), and run the last section to vertically coregister the transects. Calls coregister_icesat2.m and extract_icesat2_vertical_errors.m. 
+5) create_terrainparam_tifs.m: Creates rasters of slope and aspect for a reference elevation geotiff. Must run repeatedly if using multiple time-stamped reference elevation datasets. Calls utm2ll.m.
+6) batch_icesat2_terrain_parameter_comparison.m: Specify site-specific parameters in the top section, including terrain parameters you want to add to the concatenated ICESat-2 data table for the study site, then run the code to loop through terrain parameter geotiffs or matfiles. Matfiles for time-stamped terrain parameters can be constructed using the concatenate_glacier_DEM_timeseries.m code.
 
 Depending on the reference digital terrain models that you have for your study site, you may need to run several other codes. 
 1) calculate_DTM_geoidheights.m: Use if reference elevations are with respect to the geoid. ICEsat-2 x,y,z data are with respect to the WGS84 ellipsoid. Datum reprojection in GDAL is more accurate and is preferred.

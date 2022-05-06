@@ -6,8 +6,10 @@ function [xc,yc,theta] = ICESat2_FootprintCorners(norths,easts,ATL0X,end_flag)
 %   norths = northing coordinates for ICESat2 datapoints
 %   easts = easting coordinates for ICESat2 datapoints
 %   ATL0X = defines product as ATL06 or ATL08, must be a value of 6 or 8
+%   end_flag = location of the end of each track
 % OUTPUTS:
-%   xc = x corner coordinates
+%   xc = x corner coordinates order: (center1 center2 corner1 corner2
+%   corner3 corner4)
 %   yc = y corner coordinates
 %   theta = angle theta between the icesat2 track and due east
 
@@ -44,11 +46,11 @@ for r = 1:size(theta,1)
     
     %find box edges perpendicular to the centroid
     xc(r,1) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))+90); yc(r,1) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))+90);
-    xc(r,4) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))-90); yc(r,4) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))-90);
+    xc(r,2) = easts(r)+(footwidth/2)*cosd(nanmean(theta(r,:))-90); yc(r,2) = norths(r)+(footwidth/2)*sind(nanmean(theta(r,:))-90);
     
     %solve for corner coordinates
-    xc(r,2) = back_x+(footwidth/2)*cosd(theta(r,1)+90); yc(r,2) = back_y+(footwidth/2)*sind(theta(r,1)+90);
-    xc(r,3) = back_x+(footwidth/2)*cosd(theta(r,1)-90); yc(r,3) = back_y+(footwidth/2)*sind(theta(r,1)-90);
+    xc(r,3) = back_x+(footwidth/2)*cosd(theta(r,1)+90); yc(r,3) = back_y+(footwidth/2)*sind(theta(r,1)+90);
+    xc(r,4) = back_x+(footwidth/2)*cosd(theta(r,1)-90); yc(r,4) = back_y+(footwidth/2)*sind(theta(r,1)-90);
     xc(r,5) = front_x+(footwidth/2)*cosd(theta(r,2)-90); yc(r,5) = front_y+(footwidth/2)*sind(theta(r,2)-90);
     xc(r,6) = front_x+(footwidth/2)*cosd(theta(r,2)+90); yc(r,6) = front_y+(footwidth/2)*sind(theta(r,2)+90);
     clear back_* front_*;

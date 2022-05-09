@@ -20,8 +20,8 @@ cd /users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/
 UTMzone = 6; EPSGcode = 32606;
 
 %% loop through the DEMs, calculating slope and aspect & resaving as geotiffs
-DEMs = dir('*.tif');
-for j = 1:length(DEMs)
+DEMs = dir('*DEM*.tif');
+for j = 3; %1:length(DEMs)
     disp(DEMs(j).name);
     [Z,R] = readgeoraster(DEMs(j).name); Z(Z<0) = NaN;
     [xgrid,ygrid] = meshgrid(R.XWorldLimits(1):R.CellExtentInWorldX:R.XWorldLimits(2),R.YWorldLimits(2):-R.CellExtentInWorldY:R.YWorldLimits(1));
@@ -52,8 +52,8 @@ for j = 1:length(DEMs)
     
     %save the data
     geotiffwrite([DEMs(j).name(1:end-4),'.tif'],Z,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %elevations
-    geotiffwrite([DEMs(j).name(1:end-4),'-slope.tif'],SLOPE,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %slope
-    geotiffwrite([DEMs(j).name(1:end-4),'-aspect.tif'],ASPECT,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %aspect
+    geotiffwrite([DEMs(j).name(1:end-8),'-slope.tif'],SLOPE,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %slope
+    geotiffwrite([DEMs(j).name(1:end-8),'-aspect.tif'],ASPECT,R,'CoordRefSysCode',['EPSG:',num2str(EPSGcode),'']); %aspect
     disp('... terrain parameters saved');
     clear R* Z SLOPE ASPECT *grid LAT LON lat* lon*;
 end

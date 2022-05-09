@@ -14,7 +14,7 @@ clearvars; close all;
 
 %specify the file path and naming conventions
 DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
-abbrev = 'WG'; %site abbreviation
+abbrev = 'Wolverine'; %site abbreviation
 terrain = 'DEM'; %terrain parameter to concatenate into a .mat file
 
 %For glacierized setting, specify the site-specific glacier & snow info:
@@ -51,6 +51,10 @@ for i = 1:length(DEMs)
         decidate = (cumdays_norm(str2double(DEMs(i).name(5:6)))+str2double(DEMs(i).name(7:8)))/sum(modays_norm);
     end
     Z(i).deciyear = yr+decidate;
+    
+    %create coordinate vectors
+    Z(i).x = Z(i).R.XWorldLimits(1)+0.5*Z(i).R.CellExtentInWorldX:Z(i).R.CellExtentInWorldX:Z(i).R.XWorldLimits(end)-0.5*Z(i).R.CellExtentInWorldX; % get a vector of x coords
+    Z(i).y = Z(i).R.YWorldLimits(2)-0.5*Z(i).R.CellExtentInWorldY:-Z(i).R.CellExtentInWorldY:Z(i).R.YWorldLimits(1)+0.5*Z(i).R.CellExtentInWorldY;
     
     %replace no data value with NaN
     Z(i).z(Z(i).z<=-9999) = NaN;
@@ -92,8 +96,6 @@ end
 [mask_xgrid,mask_ygrid] = meshgrid(DEMmask.x,DEMmask.y); 
 for i = 1:length(Z)
     %apply mask
-    Z(i).x = Z(i).R.XWorldLimits(1)+0.5*Z(i).R.CellExtentInWorldX:Z(i).R.CellExtentInWorldX:Z(i).R.XWorldLimits(end)-0.5*Z(i).R.CellExtentInWorldX; % get a vector of x coords
-    Z(i).y = Z(i).R.YWorldLimits(2)-0.5*Z(i).R.CellExtentInWorldY:-Z(i).R.CellExtentInWorldY:Z(i).R.YWorldLimits(1)+0.5*Z(i).R.CellExtentInWorldY;
     [terrain_xgrid,terrain_ygrid] = meshgrid(Z(i).x,Z(i).y); 
     interp_mask = interp2(mask_xgrid,mask_ygrid,DEMmask.z,terrain_xgrid,terrain_ygrid);
     interp_mask = round(interp_mask); interp_mask(isnan(interp_mask)) = 0; interp_mask = logical(interp_mask);

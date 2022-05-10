@@ -98,17 +98,6 @@ dates = T.date;
 end_flag = zeros(size(norths,1),1);
 end_flag(unique_refs) = 1; end_flag(unique_refs(unique_refs~=1)-1) = 1; end_flag(end) = 1;
 
-% % for ATL08 files only use snow-free data (brightness flag == 0)
-% if contains(icesat2, 'ATL08') % ATL08 commands
-%     bright = T.Brightness_Flag;
-%     ib = find(bright == 0);
-%     easts = easts(ib);
-%     norths = norths(ib);
-%     zmod = zmod(ib);
-%     zmodfit = zmodfit(ib);
-% end
-
-%cd '/Users/karinazikan/Documents/ICESat2-snow-code'
 
 %% Calculating footprints and reference elevation for each data point
 %define the Reference elevation data
@@ -128,7 +117,8 @@ end
 
     % calculates footprint corners
     [xc,yc,theta] = ICESat2_FootprintCorners(norths,easts,ATL0X,end_flag);
-%%
+
+%% Calculate Reference Elevations
 for r=1:length(zmod)  
     %identify the R2erence elevation points in each ICESat2 footprint
     xv = xc(r,[3:6 3]); % bounding box x vector
@@ -146,7 +136,6 @@ for r=1:length(zmod)
         phi = atan2d((pointsiny(a)-norths(r)),(pointsinx(a)-easts(r)));
         dist(a)=abs(sqrt((pointsiny(a)-norths(r))^2+(pointsinx(a)-easts(r))^2)*sind(phi-theta(r))); %distance from the line in the center of the window  
     end
-
     maxdist = footwidth/2; % defining the maximum distance a point can be from the center icesat2 point
     w = 15/16*(1-(dist/maxdist).^2).^2; %bisqared kernel
     elevation_report_mean(r,:) = sum(w.*elevationsin)./sum(w); %weighted elevation estimate
@@ -160,9 +149,6 @@ for r=1:length(zmod)
     p{1} = fit([pointsinx, pointsiny],elevationsin,'poly11','Weights',w); %fit linear polynomial
     p{2} = fit([pointsinx, pointsiny],elevationsin,'poly33','Weights',w); %fit cubic polynomial
     p{3} = fit([pointsinx, pointsiny],elevationsin,'poly44','Weights',w); %fit quadratic polynomial
-    %     p{1} = fit([pointsinx, pointsiny],elevationsin,'poly11'); %fit linear polynomial
-    %     p{2} = fit([pointsinx, pointsiny],elevationsin,'poly33'); %fit cubic polynomial
-    %     p{3} = fit([pointsinx, pointsiny],elevationsin,'poly44'); %fit quadratic polynomial
     warning('on')
     for n=1:length(p) %loop through the degrees in d
         Em(n) = p{n}(easts(r),norths(r)); % Evaluate the fitted polynomial

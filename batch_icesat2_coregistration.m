@@ -32,7 +32,7 @@ addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
 
 %DTM (be sure the path ends in a /)
 DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
-DTM_name = 'WG-DEM-timeseries.mat';
+DTM_name = 'Wolverine-DEM-timeseries.mat';
 if contains(DTM_name,'.tif')
     DTM_date = '20071114'; %only need to enter datestring in file name if the reference elevation map is a geotiff
 else
@@ -46,7 +46,7 @@ S = shaperead('/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/R
 csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/csvs/';
 
 %site abbreviation for file names
-abbrev = 'WG'; 
+abbrev = 'Wolverine'; 
 
 %ICESat-2 product acronym
 acronym = 'ATL06';
@@ -56,7 +56,7 @@ acronym = 'ATL06';
 if contains(acronym,'ATL06') %SITE SPECIFIC!!!
    snowline = 1235; %Wolverine Glacier = 1235; 
 else %typical rain-snow transition elevation (~1500 m for contiguous US Rockies)
-   snowline = 1400; %RCEW = 1400;
+   snowline = 1500; %RCEW = 1500;
 end
 
 %days of year
@@ -305,7 +305,7 @@ for i = 1:length(csvs)
         seasonal_zref = [seasonal_zref; vert_bias_refz];
         clear vert_bias* in;
     end
-%     writetable(t,csvs(i).name);
+    writetable(t,csvs(i).name);
     clear t;
 end
 

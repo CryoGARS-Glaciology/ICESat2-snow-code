@@ -36,6 +36,7 @@ E = readtable(ref_elevations);
 
 %load the ICESat-2 data
 T  = readtable(icesat2); %read in files
+T = T([1:250],:);
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
 
 % Filter snow-on or snow-off for ATL08
@@ -44,14 +45,14 @@ if acronym == 'ATL08' % ATL08 commands
     if snowcover == 'snowoff'; 
         ib = find(bright == 0);
         disp('Snow off')
-    elseif snowcover = ='snowon';
+    elseif snowcover == 'snowon';
         ib = find(bright == 1);
     else
         error('snowcover must be set to snowon or snowoff')
         disp('Snow on')
     end
-    T = T(ib);
-    E = E(ib);
+    T = T(ib,:);
+    E = E(ib,:);
 end
 
 % ICESat-2 data  
@@ -157,3 +158,10 @@ set(gca,'FontSize',16)
 % plot(norths([1:251],:),elevation_report_mean([1:251],:),norths([1:251],:),zmod([1:251],:),'LineWidth',2); %plot elevation track of reference elevations and icesat2
 % xlabel('Northing'); % labeling the x axis
 % ylabel('Elevation'); % labeling the y axis
+
+%% Multivariate linear regression
+
+MODISinfluencersFINALfinal = [goodtemppromAIRFinalFinal(:,z) modis_spechumidityFinalFinal(:,z) modis_zenith2FinalFinal(:,z)];
+MODSTATSlm = fitlm(MODISinfluencersFINALfinal,MP_difference_Skin3,'linear');
+MODSTATSanova = anova(MODSTATSlm,'summary');
+MODSTATSanovadetails = anova(MODSTATSlm);

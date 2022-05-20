@@ -15,7 +15,7 @@ clearvars; close all;
 %specify the file path and naming conventions
 DTM_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/glaciers/Wolverine/DEMs/';
 abbrev = 'Wolverine'; %site abbreviation
-terrain = 'DEM'; %terrain parameter to concatenate into a .mat file
+terrain = 'aspect'; %terrain parameter to concatenate into a .mat file
 
 %For glacierized setting, specify the site-specific glacier & snow info:
 %glacier outline needed to exclude all on-ice locations from coreg

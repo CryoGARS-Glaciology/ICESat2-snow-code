@@ -15,3 +15,9 @@
 
 # Ignore RCEW_DEM directory
 **/RCEW_DEM/
+
+# Ignore RCEW directory
+**/RCEW/
+
+# Ignore DryCreek directory
+**/DryCreek/

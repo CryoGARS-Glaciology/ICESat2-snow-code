@@ -1,5 +1,5 @@
 %checking ICESat2 footprint mapping onto DEMs
-clear all; close all;
+%clear all; close all;
 addpath(['./functions']) 
 
 ATL0X = 8;
@@ -89,15 +89,15 @@ for j = 1:length(unique_refs)
     leg = legend(pl,'RGT','new box','old box'); set(leg,'location','eastoutside');
     title([num2str(j),') ',num2str(unique_refs(j))]);
     
-    %manually confirm accuracy of the box
-    answer = questdlg('Does the new box look correct?',...
-        'Box Check',...
-        'Yes','No','No'); %third option is the default
-    switch answer
-        case 'Yes'
-            box_flag = 1;
-        case 'No'
-            box_flag = 0;
-    end
-    disp('moving on...'); close all;
+%     %manually confirm accuracy of the box
+%     answer = questdlg('Does the new box look correct?',...
+%         'Box Check',...
+%         'Yes','No','No'); %third option is the default
+%     switch answer
+%         case 'Yes'
+%             box_flag = 1;
+%         case 'No'
+%             box_flag = 0;
+%     end
+%     disp('moving on...'); close all;
 end

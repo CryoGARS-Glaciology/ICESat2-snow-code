@@ -21,14 +21,14 @@ clearvars; close all;
 addpath(['./functions']) 
 
 %DTM (be sure the path ends in a /)
-DTM_path = 'RCEW_DEM/';
+DTM_path = 'RCEW/RCEW_DEM/';
 DTM_name = 'RCEW_1m_WGS84UTM11_WGS84.tif';
 if contains(DTM_name,'.tif')
     DTM_date = '20120826'; %only need to change this if the DTM is a geotiff
 end
 
 %csv (be sure the path ends in a /)
-csv_path = '/Users/karinazikan/Documents/ICESat2-snow-code/';
+csv_path = '/Users/karinazikan/Desktop/GitHub/ICESat2-snow-code/RCEW/';
 
 %site abbreviation for file names
 abbrev = 'RCEW';
@@ -82,7 +82,7 @@ icesat2 = [csv_path,'RCEW-ICESat2-ATL08-params']; %compile the file name
 file = readtable(icesat2); %read in files
 T = [T; file];
 
-T = T([1:250],:);
+% T = T([1:250],:);
 zmod = T.Elevation(:); % save the median 'model' elevations (icesat-2 elevations)
 zmodfit = T.Elevation_bestfit(:); % save the fitted 'model' elevations (icesat-2 elevations_bestfit)
 zmodfit(isnan(zmod)) = NaN;

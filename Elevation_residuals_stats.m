@@ -14,7 +14,7 @@
 %%% Last updated: May 10 2022 by Karina Zikan
 
 %% Inputs
-clearvars; close all;
+clearvars;
 addpath(['./functions']) 
 
 %File paths
@@ -36,7 +36,7 @@ E = readtable(ref_elevations);
 
 %load the ICESat-2 data
 T  = readtable(icesat2); %read in files
-T = T([1:250],:);
+%T = T([1:250],:);
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
 
 % Filter snow-on or snow-off for ATL08
@@ -62,6 +62,9 @@ zmodfit(isnan(zmod)) = NaN;
 zstd = T.std; %save the standard deviation of the icesat-2 elevation estimates
 easts = T.Easting(:); % pull out the easting values
 norths = T.Northing(:); % pull out the northings
+slope = T.slope(:);
+aspect = T.aspect(:);
+canopy = T.Canopy(:);
 % Ref elev data
 elevation_report_nw_mean = E.elevation_report_nw_mean;
 elevation_report_mean = E.elevation_report_nw_mean;
@@ -137,7 +140,7 @@ fplot(@(x) mynormpdf(x,Dfitmean, Dfitstd),[binx(1,1) binx(1,30)], 'Linewidth', 2
 plot([0,0],[0,max(N)+.05], 'linewidth', 2) % plot reference 0 line
 hold off %turns off hold
 
-fig10 = figure(10); clf % open figure 3
+fig10 = figure(5); clf % open figure 3
 [N,binx] = myRelDencHist(differences,nbins); %Calculates a relitive dencity histogram of the differences between the mean elevation and the DEM
 relhist = bar(binx,N,1,'FaceAlpha',.75); %plots the relative dencity histogram for diferences
 xlabel('Elevation Residuals'); % labeling the x axis
@@ -149,7 +152,7 @@ legend('Mean Elevation', 'Fitted Elevation')
 set(gca,'FontSize',16)
 
 % boxplot of differences
-fig5 = figure(5); clf % open and clear fig 5
+fig5 = figure(6); clf % open and clear fig 5
 boxplot([differences,differencesfit],'Notch','on','Labels',{'mean','fitted'}) % boxplot
 set(gca,'FontSize',16)
 % 
@@ -161,7 +164,50 @@ set(gca,'FontSize',16)
 
 %% Multivariate linear regression
 
-MODISinfluencersFINALfinal = [goodtemppromAIRFinalFinal(:,z) modis_spechumidityFinalFinal(:,z) modis_zenith2FinalFinal(:,z)];
-MODSTATSlm = fitlm(MODISinfluencersFINALfinal,MP_difference_Skin3,'linear');
-MODSTATSanova = anova(MODSTATSlm,'summary');
-MODSTATSanovadetails = anova(MODSTATSlm);
+%mean
+predictors = [slope zmodfit aspect canopy];
+DIFFlm = fitlm(predictors,differences,'linear');
+DIFFanova = anova(DIFFlm,'summary');
+DIFFanovadetails = anova(DIFFlm);
+
+figure(7);
+plot(DIFFlm);
+ylabel('Adjusted elevation residual from mean elevations')
+
+%fitted
+DIFFfitlm = fitlm(predictors,differencesfit,'linear');
+DIFFfitanova = anova(DIFFfitlm,'summary');
+DIFFfitanovadetails = anova(DIFFfitlm);
+
+figure(8);
+plot(DIFFfitlm);
+ylabel('Adjusted elevation residual from fitted elevations')
+
+%% Linear regresstions
+% slope
+DIFFfitlm_slope = fitlm(slope,differencesfit,'linear');
+figure(9);
+subplot(4,1,1);
+plot(DIFFfitlm_slope)
+xlabel('slope')
+
+% elevation
+DIFFfitlm_elevation = fitlm(zmodfit,differencesfit,'linear');
+subplot(4,1,2);
+plot(DIFFfitlm_elevation)
+xlabel('elevation')
+
+% aspect
+DIFFfitlm_aspect = fitlm(aspect,differencesfit,'linear');
+subplot(4,1,3);
+plot(DIFFfitlm_aspect)
+xlabel('aspect')
+
+% canopy
+DIFFfitlm_canopy = fitlm(canopy,differencesfit,'linear');
+subplot(4,1,4);
+plot(DIFFfitlm_canopy)
+xlabel('canopy')
+
+%% Boxplots
+% slope

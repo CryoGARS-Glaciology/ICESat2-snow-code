@@ -18,8 +18,8 @@ clearvars;
 addpath(['./functions']) 
 
 %File paths
-icesat2 = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW-ICESat2-ATL08-params';
-ref_elevations = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW-ICESat2-ATL08-ref-elevations';
+icesat2 = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW/RCEW-ICESat2-ATL08-params';
+ref_elevations = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW/RCEW-ICESat2-ATL08-ref-elevations';
 
 %site abbreviation for file names
 abbrev = 'RCEW';

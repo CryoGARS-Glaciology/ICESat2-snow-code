@@ -22,5 +22,8 @@
 # Ignore DryCreek directory
 **/DryCreek/
 
+# Ignore Mores directory
+**/Mores/
+
 # Ignore jupyter checkpoint folder
 **/.ipynb_checkpoints/

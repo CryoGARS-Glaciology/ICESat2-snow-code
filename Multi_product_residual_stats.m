@@ -1,17 +1,16 @@
-%%% This code was writen by Karina Zikan to statistically compare ICESat-2
-%%% elevations compiled by batch_icesat2_terrain_parameter_comparison.m to
-%%% the reference elevations calculated by DTM_reference_elevations_calculation.m
+%%% This code was writen by Karina Zikan to statistically compare elevations
+%%% from multiple ICESat-2 products to reference elevations calculated by 
+%%% DTM_reference_elevations_calculation.m
 %%%
 %%% SPECIFIED INPUTS:
 %%%     icesat2 = path to ICESat-2 file (output from batch_icesat2_terrain_parameter_comparison.m)
 %%%     ref_elevations = path to reference elevations file (output from DTM_reference_elevations_calculation.m)
 %%%     abbrev = site abriviation for file name
-%%%     acronym = ICESat-2 product acronym
 %%%     snowcover = set to snow-on ('snowon') or snow-off ('snowoff') conditions
 %%% OUTPUTS:
 %%%
 %%%
-%%% Last updated: May 10 2022 by Karina Zikan
+%%% Last updated: September 2022 by Karina Zikan
 
 %% Inputs
 clearvars;
@@ -26,9 +25,6 @@ ref_elevations_atl06_class = '/Users/karinazikan/Documents/ICESat2-snow-code/RCE
 
 %site abbreviation for file names
 abbrev = 'RCEW';
-
-% %ICESat-2 product acronym
-% acronym = 'ATL08';
 
 %Set snowcover to 'snowon' or 'snowoff'
 snowcover = 'snowoff';
@@ -73,172 +69,79 @@ I_06_class = I_06_class(ib,:);
 E_06_class = E_06_class(ib,:);
 
 
-%%
-for i = [1,2]
+%% Loop through each product
+N_Products = 2; %number of products to analyze 
+for i = 1:N_Products
     if i == 1
         T = I_08;
         E = E_08;
         acronym = 'ATL08';
-    else
+
+        % ICESat-2 data
+        zmod = T.Elevation_bestfit(:); % save the fitted 'model' elevations (icesat-2 elevations)
+        zstd = T.std; %save the standard deviation of the icesat-2 elevation estimates
+        easts = T.Easting(:); % pull out the easting values
+        norths = T.Northing(:); % pull out the northings
+        slope = T.slope(:);
+        aspect = T.aspect(:);
+        canopy = T.Canopy(:);
+    else %i == 2
         T = I_06_class;
         E = E_06_class;
         acronym = 'ATL06sr_class';
+
+        % ICESat-2 data
+        zmod = T.h_mean(:); % save the median 'model' elevations (icesat-2 elevations
+        zstd = T.h_sigma; %save the standard deviation of the icesat-2 elevation estimates
+        easts = T.Easting(:); % pull out the easting values
+        norths = T.Northing(:); % pull out the northings
+        %     slope = T.slope(:);
+        %     aspect = T.aspect(:);
+        %     canopy = T.Canopy(:);
+
+        %     else
+        %         T = I_06;
+        %         E = E_06;
+        %         acronym = 'ATL06sr';
     end
-    % ICESat-2 data
-    zmod = T.Elevation(:); % save the median 'model' elevations (icesat-2 elevations)
-    zmodfit = T.Elevation_bestfit(:); % save the fitted 'model' elevations (icesat-2 elevations_bestfit)
-    zmodfit(isnan(zmod)) = NaN;
-    zstd = T.std; %save the standard deviation of the icesat-2 elevation estimates
-    easts = T.Easting(:); % pull out the easting values
-    norths = T.Northing(:); % pull out the northings
-%     slope = T.slope(:);
-%     aspect = T.aspect(:);
-%     canopy = T.Canopy(:);
     % Ref elev data
-    elevation_report_nw_mean = E.elevation_report_nw_mean;
-    elevation_report_mean = E.elevation_report_nw_mean;
-    elevation_report_fitted = E.elevation_report_fitted;
-    elevation_report_std = E.elevation_report_std;
+    elevation_report(:,1) = E.elevation_report_nw_mean;  %non-weighted mean ref elevation
+    elevation_report(:,2) = E.elevation_report_mean;    %weighted mean ref elevation
+    elevation_report(:,3) = E.elevation_report_fitted;    %weighted & fitted ref elevation
+    elevation_report_std = E.elevation_report_std;  %std of elevations within footprint
 
     %% Stats
     %calculate the elevation residuals
-    differences = zmod - elevation_report_mean; %calculate the difference between the mean icesat2 elevations and the calculated reference elevations
-    differences(differences > 80) = nan; differences(differences < -80) = nan; %remove extreme outliers
-    Dmean = nanmean(differences); % calculate mean of diferences
-    Dstd = std(differences,'omitnan'); % calculate std of diferences
-    zrmse = sqrt(nansum((differences).^2)./length(differences)); %calculate rmse of  differeces
+    for j = 1:3
+        differences = zmod - elevation_report(:,j); %calculate the icesat2 elevations and the calculated reference elevations
+        differences(differences > 80) = NaN; differences(differences < -80) = NaN; %remove extreme outliers
+        Dmean(:,j) = nanmean(differences); % calculate mean of diferences
+        Dstd(:,j) = std(differences,'omitnan'); % calculate std of diferences
+        zrmse(:,j) = sqrt(nansum((differences).^2)./length(differences)); %calculate rmse of  differeces
 
-    differencesfit = zmodfit - elevation_report_fitted; %calculate the difference between the fitted icesat2 elevations and the calculated reference elevations
-    differencesfit(differencesfit > 80) = nan; differencesfit(differencesfit < -80) = nan; %remove extreme outliers
-    Dfitmean = nanmean(differencesfit); % calculate mean of fit diferences
-    Dfitstd = std(differencesfit,'omitnan'); % calculate std of diferences
-    zfitrmse = sqrt(nansum((differencesfit).^2)./length(differencesfit)); %calculate rmse of fit differeces
+%         % Removing residuals below -13
+%         ix = find(differences < -13);
+%         zmod(ix) = NaN;
+%         differences(ix) = NaN;
 
-    % Removing residuals below -13
-    ix = find(differences < -13);
-    zmod(ix) = NaN;
-    differences(ix) = NaN;
-    ix = find(differencesfit < -13);
-    zmodfit(ix) = NaN;
-    differencesfit(ix) = NaN;
+        Residuals(:,j) = differences; 
+        %   Residuals(:,1) is comparison to non weighted mean elevations
+        %   Residuals(:,2) is comparison to weighted mean elevations
+        %   Residuals(:,3) is comparison to weighted & fitted elevations
+
+    end
 
     %% Plots
-    % 1-1 plots
-    fig1 = figure(1); clf %create figure 1
-    hold on
-    errorbar(elevation_report_mean,zmod,zstd,zstd,elevation_report_std,elevation_report_std,'.','MarkerSize',10); % 1-1 plot of median icesat2 elev vs reference elev
-    plot([1000 2100], [1000 2100], '-r') % plot reference 1-1 line
-    xlabel('reference elevation'); %label x axis
-    ylabel('ICESat-2 mean elevation') %label y axis
-    legend('Data', 'Reference Line') %legendhold off
-
-    text(1100,2100,['RMSE = ' num2str(zrmse)]) %print rmse on plot
-
-    fig2 = figure(2); clf %create figure 2
-    hold on
-    errorbar(elevation_report_fitted,zmodfit,zstd,zstd,elevation_report_std,elevation_report_std,'.','MarkerSize',10); % 1-1 plot of fitted icesat2 elev vs reference elev
-    xlabel('reference elevation'); %label x axis
-    ylabel('ICESat-2 fitted elevation') %label y axis
-    plot([1000 2100], [1000 2100], '-r') % plot reference 1-1 line
-    hold off
-    legend('Data', 'Reference Line') %legend
-    text(1100,2100,['RMSE = ' num2str(zfitrmse)]) %print rmse on plot
-
-    % Histogram of diferences
-    nbins = 30; %sets the number of bins for the reletive dencity histograms (This value will also be used for the plots in fig 2)
-
-    % plot mean diferences
-    fig3 = figure(3); clf % open figure 3
-    [N,binx] = myRelDencHist(differences,nbins); %Calculates a relitive dencity histogram of the differences between the mean elevation and the DEM
-    relhist = bar(binx,N,1); %plots the relative dencity histogram for diferences
-    xlabel('Difference between the mean ICESat_2 elevation and the reference DEM'); % labeling the x axis
-    ylabel('Normaized number of observations'); % labeling the y axis
-    hold on %puts hold on so the histogram is not over written by the pdf plot
-    fplot(@(x) mynormpdf(x,Dmean, Dstd),[binx(1,1) binx(1,30)], 'Linewidth', 2); %uses the "true" mean and std for elevations to plot the normal pdf for elevations
-    plot([0,0],[0,max(N)+.05], 'linewidth', 2) % plot reference 0 line
-    hold off %turns off hold
-
-    % plot fitted diferences
-    fig4 = figure(4); clf % open figure 4
-    [N,binx] = myRelDencHist(differencesfit,nbins); %Calculates a relitive dencity histogram of the differences between the mean elevation and the DEM
-    relhist = bar(binx,N,1); %plots the relative dencity histogram for diferences
-    xlabel('Difference between the fitted ICESat_2 elevation and the reference DEM'); % labeling the x axis
-    ylabel('Normaized number of observations'); % labeling the y axis
-    hold on %puts hold on so the histogram is not over written by the pdf plot
-    fplot(@(x) mynormpdf(x,Dfitmean, Dfitstd),[binx(1,1) binx(1,30)], 'Linewidth', 2); %uses the "true" mean and std for elevations to plot the normal pdf for elevations
-    plot([0,0],[0,max(N)+.05], 'linewidth', 2) % plot reference 0 line
-    hold off %turns off hold
-
-    fig10 = figure(5); clf % open figure 3
-    [N,binx] = myRelDencHist(differences,nbins); %Calculates a relitive dencity histogram of the differences between the mean elevation and the DEM
-    relhist = bar(binx,N,1,'FaceAlpha',.75); %plots the relative dencity histogram for diferences
-    xlabel('Elevation Residuals'); % labeling the x axis
-    ylabel('Normaized number of observations'); % labeling the y axis
-    hold on %puts hold on so the histogram is not over written by the pdf plot
-    [N,binx] = myRelDencHist(differencesfit,nbins); %Calculates a relitive dencity histogram of the differences between the mean elevation and the DEM
-    relhist = bar(binx,N,1,'FaceAlpha',.75); %plots the relative dencity histogram for diferences
-    legend('Mean Elevation', 'Fitted Elevation')
-    set(gca,'FontSize',16)
-
-    % boxplot of differences
-    fig5 = figure(6); clf % open and clear fig 5
-    boxplot([differences,differencesfit],'Notch','on','Labels',{'mean','fitted'}) % boxplot
-    set(gca,'FontSize',16)
+    % Reference historgrams
+    figure(1); 
+    subplot(N_Products,1,i); clf; set(gcf,'position',[50 50 800 400]); clear h;
+    binwidth = 0.2;
+    h(1) = histogram(Residuals(:,1),'Normalization','pdf'); h(1).BinWidth = binwidth; h(1).FaceAlpha = 1;  h(1).EdgeColor = 'k'; hold on;
+    h(2) = histogram(Residuals(:,2),'Normalization','pdf'); h(2).BinWidth = binwidth; h(2).FaceAlpha = 0.75;  h(2).EdgeColor = 'k'; 
+    h(3) = histogram(Residuals(:,3),'Normalization','pdf'); h(3).BinWidth = binwidth; h(3).FaceAlpha = 0.75;  h(3).EdgeColor = 'w'; 
+    plot([0,0],[0,.7], 'linewidth', 2, 'Color','k') % plot reference 0 line
+    set(gca,'fontsize',16,'xlim',[nanmedian(T.VerticalErrors)-3*1.4826*mad(T.VerticalErrors,1) nanmedian(T.VerticalErrors)+3*1.4826*mad(T.VerticalErrors,1)]);
+    leg = legend(h,'non-weighted mean','weighted mean','weighted & fitted');
+    xlabel('Vertical offset (m)'); ylabel('Probability density');
 
 end
-%
-% % plot of ICESat2 elevations and DEM vs norths
-% fig6 = figure(6); clf %open and clear fig 6
-% plot(norths([1:251],:),elevation_report_mean([1:251],:),norths([1:251],:),zmod([1:251],:),'LineWidth',2); %plot elevation track of reference elevations and icesat2
-% xlabel('Northing'); % labeling the x axis
-% ylabel('Elevation'); % labeling the y axis
-
-%% Multivariate linear regression
-
-%mean
-predictors = [slope zmodfit aspect canopy];
-DIFFlm = fitlm(predictors,differences,'linear');
-DIFFanova = anova(DIFFlm,'summary');
-DIFFanovadetails = anova(DIFFlm);
-
-figure(7);
-plot(DIFFlm);
-ylabel('Adjusted elevation residual from mean elevations')
-
-%fitted
-DIFFfitlm = fitlm(predictors,differencesfit,'linear');
-DIFFfitanova = anova(DIFFfitlm,'summary');
-DIFFfitanovadetails = anova(DIFFfitlm);
-
-figure(8);
-plot(DIFFfitlm);
-ylabel('Adjusted elevation residual from fitted elevations')
-
-%% Linear regresstions
-% slope
-DIFFfitlm_slope = fitlm(slope,differencesfit,'linear');
-figure(9);
-subplot(4,1,1);
-plot(DIFFfitlm_slope)
-xlabel('slope')
-
-% elevation
-DIFFfitlm_elevation = fitlm(zmodfit,differencesfit,'linear');
-subplot(4,1,2);
-plot(DIFFfitlm_elevation)
-xlabel('elevation')
-
-% aspect
-DIFFfitlm_aspect = fitlm(aspect,differencesfit,'linear');
-subplot(4,1,3);
-plot(DIFFfitlm_aspect)
-xlabel('aspect')
-
-% canopy
-DIFFfitlm_canopy = fitlm(canopy,differencesfit,'linear');
-subplot(4,1,4);
-plot(DIFFfitlm_canopy)
-xlabel('canopy')
-
-%% Boxplots
-% slope

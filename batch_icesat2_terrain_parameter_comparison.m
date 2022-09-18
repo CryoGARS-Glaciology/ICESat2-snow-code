@@ -21,26 +21,28 @@
 clearvars; close all; 
 
 %path for the code
-addpath('/Users/ellynenderlin/Research/NASA_CryoIdaho/ICESat2-snow-code/')
+addpath('/Users/karinazikan/Desktop/GitHub/ICESat2-snow-code/')
 
 %terrain parameter file (be sure the path ends in a /)
-TP_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/DEMs/';
-TP_name = 'RCEW_1m_WGS84UTM11_WGS84.tif'; %list the DEM name and it will find all associated terrain param files
+TP_path = '/Users/karinazikan/Desktop/GitHub/ICESat2-snow-code/RCEW/RCEW_DEM/geoid12-corrected/';
+TP_name = 'RCEW_2014_Lidar_Derived_1m_DEM-ellipsoidalWGS84.tif'; %list the DEM name and it will find all associated terrain param files
 
 %site concanated csv (be sure the path ends in a /)
-csv_path = '/Users/ellynenderlin/Research/NASA_CryoIdaho/mountains/RCEW/csvs/';
+csv_path = '/Users/karinazikan/Desktop/GitHub/ICESat2-snow-code/RCEW/';
+csv_name = 'RCEW-ICESat2-ATL06sr-params';
 
 %site abbreviation for file names
-abbrev = 'RCEW'; 
+abbrev = 'DCEW'; 
 
 %ICESat-2 product acronym
-acronym = 'ATL08';
+acronym = 'ATL06';
+ATL0X = 6;
 
 %recommended terrain parameters to add to the table
 if contains(acronym,'ATL08')
-    terrain_params = {'slope','aspect','ruggedness','VegHeight'};
+    terrain_params = {'slope','aspect','VegHeight'};
 else
-    terrain_params = {'slope','aspect','ruggedness'};
+    terrain_params = {'slope','aspect'};
 end
 
 % %if ATL06: glacier outline
@@ -55,7 +57,7 @@ disp('This may take a while, especially if using time-stamped reference data!');
 
 %load the ICESat-2 data table
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
-icesat2 = [csv_path,abbrev,'-ICESat2-',acronym,'-params.csv'];
+icesat2 = [csv_path,csv_name,'.csv'];
 T = readtable(icesat2);
 
 %determine whether this is a data update or a new data grab
@@ -78,8 +80,7 @@ for i = 1:length(terrain_params)
                     for j = 1:length(tifs)
                         if contains(tifs(j).name,char(terrain_params(i)))
                             disp(['Extracting stats for ',char(terrain_params(i))]);
-                            [tif,R2] = readgeoraster(tifs(j).name);
-                            params = calc_icesat2_params(icesat2, tif, R2);
+                            params = calc_icesat2_params(icesat2, tifs(j) ,ATL0X);
                             params(params==-9999) = NaN;
                             T = addvars(T,params,'NewVariableNames',char(terrain_params(i)));
                             clear params tif R2;
@@ -128,7 +129,7 @@ for i = 1:length(terrain_params)
             end
     end
     cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
-    writetable(T,[abbrev,'-ICESat2-',acronym,'-params.csv']);
+    writetable(T,[csv_name,'.csv']);
     disp('Resaved table');
 end
 disp('Done extracting terrain parameters!');

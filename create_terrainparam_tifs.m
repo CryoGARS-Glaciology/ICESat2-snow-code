@@ -21,7 +21,7 @@ UTMzone = 6; EPSGcode = 32606;
 
 %% loop through the DEMs, calculating slope and aspect & resaving as geotiffs
 DEMs = dir('*DEM*.tif');
-for j = 3; %1:length(DEMs)
+for j = 1:length(DEMs)
     disp(DEMs(j).name);
     [Z,R] = readgeoraster(DEMs(j).name); Z(Z<0) = NaN;
     [xgrid,ygrid] = meshgrid(R.XWorldLimits(1):R.CellExtentInWorldX:R.XWorldLimits(2),R.YWorldLimits(2):-R.CellExtentInWorldY:R.YWorldLimits(1));

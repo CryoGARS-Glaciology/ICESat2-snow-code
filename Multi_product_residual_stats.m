@@ -8,101 +8,108 @@
 %%%     abbrev = site abriviation for file name
 %%%     snowcover = set to snow-on ('snowon') or snow-off ('snowoff') conditions
 %%% OUTPUTS:
+%%%     
 %%%
-%%%
-%%% Last updated: September 2022 by Karina Zikan
+%%% Last updated: November 2022 by Karina Zikan
 
 %% Inputs
 clearvars;
 addpath(['./functions'])
 addpath(['/Users/karinazikan/Documents/cmocean'])
 
+%Folder path 
+folderpath = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW/';
+%site abbreviation for file names
+abbrev = 'RCEW';
+%Set snowcover to 'snowonn' or 'snowoff'
+snowcover = 'snowonn';
+
+%%
+
 %File paths
-% icesat2_atl08 = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW/RCEW-ICESat2-ATL08-params';
-% ref_elevations_atl08 = '/Users/karinazikan/Documents/ICESat2-snow-code/RCEW/RCEW-ICESat2-ATL08-ref-elevations';
+icesat2_atl08 = [folderpath abbrev '-ICESat2-ATL08-params'];
+ref_elevations_atl08 = [folderpath abbrev '-ICESat2-ATL08-ref-elevations'];
 
-icesat2_atl06 = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/DCEW-ICESat2-ATL06sr-params';
-ref_elevations_atl06 = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/DCEW-ICESat2-ATL06sr-ref-elevations';
+icesat2_atl06 = [folderpath abbrev '-ICESat2-ATL06sr-params'];
+ref_elevations_atl06 = [folderpath abbrev '-ICESat2-ATL06sr-ref-elevations'];
 
-icesat2_atl06_class = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/DCEW-ICESat2-ATL06sr-atl08class-params';
-ref_elevations_atl06_class = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/DCEW-ICESat2-ATL06sr-atl08class-ref-elevations';
+icesat2_atl06_class = [folderpath abbrev '-ICESat2-ATL06sr-atl08class-params'];
+ref_elevations_atl06_class = [folderpath abbrev '-ICESat2-ATL06sr-atl08class-ref-elevations'];
 
 %set colors
-colors{1} = cmocean('-dense',5);
-colors{2} = cmocean('-algae',4);
-colors{3} = cmocean('ice',4);
-
-%site abbreviation for file names
-abbrev = 'DCEW';
-
-%Set snowcover to 'snowon' or 'snowoff'
-snowcover = 'snowoff';
+colors{1} = cmocean('-dense',6);
+colors{2} = cmocean('-algae',5);
+colors{3} = cmocean('ice',5);
 
 %% Load data
 %load the reference elevation data
-% E_08 = readtable(ref_elevations_atl08);
+E_08 = readtable(ref_elevations_atl08);
 E_06 = readtable(ref_elevations_atl06);
 E_06_class = readtable(ref_elevations_atl06_class);
 
 %load the ICESat-2 data
-% I_08 = readtable(icesat2_atl08); %read in files
+I_08 = readtable(icesat2_atl08); %read in files
 I_06 = readtable(icesat2_atl06);
 I_06_class = readtable(icesat2_atl06_class);
 
 footwidth = 11; % approx. width of icesat2 shot footprint in meters
 
-% Plot Site + Tracks
-DTM_name = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/DCEW-10mDEMcropped-tif/DCEW-DEMclip.tif';
-[DTM,Ref] = readgeoraster(DTM_name);
-if isfield(Ref,'LatitudeLimits')
-    [latgrid,longrid] = meshgrid(Ref.LongitudeLimits(1)+0.5*Ref.CellExtentInLongitude:Ref.CellExtentInLongitude:Ref.LongitudeLimits(2)-0.5*Ref.CellExtentInLongitude,...
-        Ref.LatitudeLimits(2)-0.5*Ref.CellExtentInLatitude:-Ref.CellExtentInLatitude:Ref.LatitudeLimits(1)+0.5*Ref.CellExtentInLatitude);
-    [xgrid, ygrid,~] = wgs2utm(latgrid,longrid);
-else
-    x = Ref.XWorldLimits(1)+0.5*Ref.CellExtentInWorldX:Ref.CellExtentInWorldX:Ref.XWorldLimits(2)-0.5*Ref.CellExtentInWorldX;
-    if strcmp(Ref.ColumnsStartFrom,'north')
-        y = Ref.YWorldLimits(2)-0.5*Ref.CellExtentInWorldY:-Ref.CellExtentInWorldY:Ref.YWorldLimits(1)+0.5*Ref.CellExtentInWorldY;
-    else
-        y = Ref.YWorldLimits(1)+0.5*Ref.CellExtentInWorldY:Ref.CellExtentInWorldY:Ref.YWorldLimits(2)-0.5*Ref.CellExtentInWorldY;
-    end
-    [xgrid, ygrid] = meshgrid(x, y); % create grids of each of the x and y coords
-end
-x = x./(10^3); % to km
-y = y./(10^3);
-y = flip(y);% to km
-DTM(DTM<0) = NaN;
-
-fig1 = figure(1);
-imagesc(x,y,DTM) 
-daspect([1 1 1])
-colormap(cmocean('grey'))
-hold on
-scatter([I_06.Easting./(10^3)],[I_06.Northing./(10^3)],[],'g','.')
-xlabel('Easting (km)')
-ylabel('Northing (km)')
-set(gca,'fontsize',16);
-
-% % Filter snow-on or snow-off for ATL08
-% bright = I_08.Brightness_Flag;
-% if snowcover == 'snowoff'
-%     ib = find(bright == 0);
-%     disp('Snow off')
-% elseif snowcover == 'snowon'
-%     ib = find(bright == 1);
-%     disp('Snow on')
+% % Plot Site + Tracks
+% DTM_name = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/DCEW_DEM/DryCreekBase1m_WGS84UTM11_WGS84.tif';
+% [DTM,Ref] = readgeoraster(DTM_name);
+% if isfield(Ref,'LatitudeLimits')
+%     [latgrid,longrid] = meshgrid(Ref.LongitudeLimits(1)+0.5*Ref.CellExtentInLongitude:Ref.CellExtentInLongitude:Ref.LongitudeLimits(2)-0.5*Ref.CellExtentInLongitude,...
+%         Ref.LatitudeLimits(2)-0.5*Ref.CellExtentInLatitude:-Ref.CellExtentInLatitude:Ref.LatitudeLimits(1)+0.5*Ref.CellExtentInLatitude);
+%     [xgrid, ygrid,~] = wgs2utm(latgrid,longrid);
 % else
-%     error('snowcover must be set to snowon or snowoff')
+%     x = Ref.XWorldLimits(1)+0.5*Ref.CellExtentInWorldX:Ref.CellExtentInWorldX:Ref.XWorldLimits(2)-0.5*Ref.CellExtentInWorldX;
+%     if strcmp(Ref.ColumnsStartFrom,'north')
+%         y = Ref.YWorldLimits(2)-0.5*Ref.CellExtentInWorldY:-Ref.CellExtentInWorldY:Ref.YWorldLimits(1)+0.5*Ref.CellExtentInWorldY;
+%     else
+%         y = Ref.YWorldLimits(1)+0.5*Ref.CellExtentInWorldY:Ref.CellExtentInWorldY:Ref.YWorldLimits(2)-0.5*Ref.CellExtentInWorldY;
+%     end
+%     [xgrid, ygrid] = meshgrid(x, y); % create grids of each of the x and y coords
 % end
-% I_08 = I_08(ib,:);
-% E_08 = E_08(ib,:);
+% DTM(DTM>(2.5*10^3)) = NaN;
+% x = x./(10^3); % to km
+% y = y./(10^3);% to km
+% %y = flip(y);
+% DTM(DTM<0) = NaN;
+% 
+% fig1 = figure(1);
+% imagesc(x,y,DTM) 
+% daspect([1 1 1])
+% colormap(cmocean('grey'))
+% hold on
+% scatter([I_06.Easting./(10^3)],[I_06.Northing./(10^3)],[],'g','.')
+% xlabel('Easting (km)')
+% ylabel('Northing (km)')
+% set(gca,'fontsize',16);
+%%
+% Filter snow-on or snow-off for ATL08
+% % % % % bright = I_08.Brightness_Flag;
+% % % % % dates_08 = datetime(I_08.date);
+
+% season (1=winter(Jan,Feb,Mar),2=spring(Apr,May,Jun),3=summer(Jul,Aug,Sep),4=fall(Oct,Nov,Dec))
+if snowcover == 'snowoff'
+    ib = find(I_08.season == 3); 
+    disp('Snow off')
+elseif snowcover == 'snowonn'
+    ib = find(I_08.season == 1);
+    disp('Snow on')
+else
+    error('snowcover must be set to snowonn or snowoff')
+end
+I_08 = I_08(ib,:);
+E_08 = E_08(ib,:);
 
 % Filter snow-on or snow-off for ATl06
 dates_06 = datetime(I_06.time.Year,I_06.time.Month,I_06.time.Day);
 if snowcover == 'snowoff'
     ib = find(I_06.time.Month >=6 & I_06.time.Month <= 9);
     disp('Snow off')
-elseif snowcover == 'snowon'
-    ib = find(I_06.time.Month <=2 & I_06.time.Month >=12);
+elseif snowcover == 'snowonn'
+    ib = find(I_06.time.Month <=2 | I_06.time.Month >=12);
     disp('Snow on')
 else
     error('snowcover must be set to snowon or snowoff')
@@ -115,11 +122,11 @@ dates_06_class = datetime(I_06_class.time.Year,I_06_class.time.Month,I_06_class.
 if snowcover == 'snowoff'
     ib = find(I_06_class.time.Month >=6 & I_06_class.time.Month <= 9);
     disp('Snow off')
-elseif snowcover == 'snowon'
-    ib = find(I_06_class.time.Month <=2 & I_06_class.time.Month >=12);
+elseif snowcover == 'snowonn'
+    ib = find(I_06_class.time.Month <=2 | I_06_class.time.Month >=12);
     disp('Snow on')
 else
-    error('snowcover must be set to snowon or snowoff')
+    error('snowcover must be set to snowonn or snowoff')
 end
 I_06_class = I_06_class(ib,:);
 E_06_class = E_06_class(ib,:);
@@ -127,19 +134,20 @@ E_06_class = E_06_class(ib,:);
 
 %% Loop through each product
 N_Products = 3; %number of products to analyze
-for i = 2:N_Products
+for i = 1:N_Products
     if i == 1
         T = I_08;
         E = E_08;
         acronym = 'ATL08';
 
         % ICESat-2 data
-        zmod = T.Elevation_bestfit(:); % save the fitted 'model' elevations (icesat-2 elevations)
+         zmod = T.Elevation_bestfit(:); % save the fitted 'model' elevations (icesat-2 elevations)
+%         zmod = T.Elevation(:); % save the 'model' elevations (icesat-2 elevations)
         %zstd = T.std; %save the standard deviation of the icesat-2 elevation estimates
         easts = T.Easting(:); % pull out the easting values
         norths = T.Northing(:); % pull out the northings
-        slope = T.slope(:);
-        aspect = T.aspect(:);
+%         slope = T.slope(:);
+%         aspect = T.aspect(:);
         %canopy = T.Canopy(:);
     elseif i == 2
          T = I_06;
@@ -178,9 +186,11 @@ for i = 2:N_Products
     for j = 1:3
         differences = zmod - elevation_report(:,j); %calculate the icesat2 elevations and the calculated reference elevations
         differences(differences > 80) = NaN; differences(differences < -80) = NaN; %remove extreme outliers
-        Dmean(:,j) = nanmean(differences); % calculate mean of diferences
-        Dstd(:,j) = std(differences,'omitnan'); % calculate std of diferences
-        zrmse(:,j) = sqrt(nansum((differences).^2)./length(differences)); %calculate rmse of  differeces
+        Dmean{i}(:,j) = nanmean(differences); % calculate mean of diferences
+        Dstd{i}(:,j) = std(differences,'omitnan'); % calculate std of diferences
+        Dmad{i}(j,:) = nanmean(abs(differences-Dmean{i}(:,j)));
+        zrmse{i}(:,j) = sqrt(nansum((differences).^2)./length(differences)); %calculate rmse of  differeces
+%        Dks_test(i,:) = kstest(differences); %kolmagorov smirnof test
 
         %         % Removing residuals below -13
         %         ix = find(differences < -13);
@@ -205,74 +215,113 @@ for i = 2:N_Products
     h(3) = histogram(Residuals(:,3),'Normalization','pdf'); h(3).BinWidth = binwidth; h(3).FaceAlpha = 0.75;  h(3).FaceColor = colors{i}(3,:); h(3).EdgeColor = 'w';
     plot([0,0],[0,.8], 'linewidth', 2, 'Color','k') % plot reference 0 line
     set(gca,'fontsize',16,'xlim',[-4 2]);
-    legend(h,['DEM: Non-weighted mean, std = ' num2str(Dstd(:,1))],['DEM: Weighted mean, std = ' num2str(Dstd(:,2))],['DEM: Weighted and fitted, std = ' num2str(Dstd(:,3))],'Location','northwest');
+    legend(h,['DEM: Non-weighted mean, std = ' num2str(Dstd{i}(:,1))],['DEM: Weighted mean, std = ' num2str(Dstd{i}(:,2))],['DEM: Weighted and fitted, std = ' num2str(Dstd{i}(:,3))],'Location','northwest');
     xlabel('Vertical offset (m)'); ylabel('Probability density'); title(acronym);
 
     % Reference pdfs
     fig3 = figure(3);
     subplot(N_Products,1,i); set(gcf,'position',[50 50 800 500]); hold on
     binwidth = 0.2;
-    fplot(@(x) mynormpdf(x,Dmean(:,1), Dstd(:,1)),[-10 8], 'Linewidth', 2,'Color',colors{i}(1,:));
-    fplot(@(x) mynormpdf(x,Dmean(:,2), Dstd(:,2)),[-10 8], 'Linewidth', 2,'Color',colors{i}(2,:));
-    fplot(@(x) mynormpdf(x,Dmean(:,3), Dstd(:,3)),[-10 8], 'Linewidth', 2,'Color',colors{i}(3,:));
+    fplot(@(x) mynormpdf(x,Dmean{i}(:,1), Dstd{i}(:,1)),[-10 8], 'Linewidth', 2,'Color',colors{i}(1,:));
+    fplot(@(x) mynormpdf(x,Dmean{i}(:,2), Dstd{i}(:,2)),[-10 8], 'Linewidth', 2,'Color',colors{i}(2,:));
+    fplot(@(x) mynormpdf(x,Dmean{i}(:,3), Dstd{i}(:,3)),[-10 8], 'Linewidth', 2,'Color',colors{i}(3,:));
     plot([0,0],[0,.8], 'linewidth', 2, 'Color','k') % plot reference 0 line
     set(gca,'fontsize',16,'xlim',[-10 8]);
-    legend(h,['DEM: Non-weighted mean, std = ' num2str(Dstd(:,1))],['DEM: Weighted mean, std = ' num2str(Dstd(:,2))],['DEM: Weighted and fitted, std = ' num2str(Dstd(:,3))],'Location','northwest');
+    legend(h,['DEM: Non-weighted mean, std = ' num2str(Dstd{i}(:,1))],['DEM: Weighted mean, std = ' num2str(Dstd{i}(:,2))],['DEM: Weighted and fitted, std = ' num2str(Dstd{i}(:,3))],'Location','northwest');
     xlabel('Vertical offset (m)'); ylabel('Probability density'); title(acronym);
-
-    % Reference pdfs for each tested product
-    fig6 = figure(6); hold on
-    if i == 1
-        fplot(@(x) mynormpdf(x,Dmean(:,1), Dstd(:,1)),[-10 8], 'Linewidth', 2,'Color',colors{i}(3,:));
-    else
-        fplot(@(x) mynormpdf(x,Dmean(:,1), Dstd(:,1)),[-10 8], 'Linewidth', 2,'Color',colors{i}(3,:));
-    end
-
 
     clear elevation_report Residuals
 end
 %% Plots outside loop
 % Products historgrams
 fig4 = figure(4); clf; hold on
-for i = 2:N_Products
+for i = 1:N_Products
     if i == 1
         h(i) = histogram(ResidualsAll{i}(:,3),'Normalization','pdf');  h(i).FaceAlpha = 1; h(i).BinWidth = binwidth; h(i).FaceColor = colors{i}(3,:);  h(i).EdgeColor = 'k';
+        fplot(@(x) mynormpdf(x,nanmean(ResidualsAll{i}(:,3)), std(ResidualsAll{i}(:,3),'omitnan')),[-10 8], 'Linewidth', 2,'Color',colors{i}(2,:));
     else
-        h(i) = histogram(ResidualsAll{i}(:,1),'Normalization','pdf');  h(i).FaceAlpha = .75; h(i).BinWidth = binwidth; h(i).FaceColor = colors{i}(3,:);  h(i).EdgeColor = 'k';
+        h(i) = histogram(ResidualsAll{i}(:,1),'Normalization','pdf');  h(i).FaceAlpha = .5; h(i).BinWidth = binwidth; h(i).FaceColor = colors{i}(3,:);  h(i).EdgeColor = 'k';
+        fplot(@(x) mynormpdf(x,nanmean(ResidualsAll{i}(:,1)), std(ResidualsAll{i}(:,1),'omitnan')),[-10 8], 'Linewidth', 2,'Color',colors{i}(2,:));
     end
 end
-plot([0,0],[0,.8], 'linewidth', 2, 'Color','k') % plot reference 0 line
+%plot([0,0],[0,.8], 'linewidth', 2, 'Color','k') % plot reference 0 line
 set(gca,'fontsize',16,'xlim',[-4 2]);
 set(gcf,'position',[50 50 800 400]);
-legend('ATL08','ATL06sr','ATL06sr ATL08 clasifications','Location','northwest');
+legend('ATL08','ATL08 pdf','ATL06sr','ATL06sr pdf','ATL06sr ATL08 clasifications','ATL06sr ATL08 clasifications pdf');
 xlabel('Vertical offset (m)'); ylabel('Probability density');
+txt = {['N-08 = ' num2str(length(ResidualsAll{1}(:,1))-sum(isnan(ResidualsAll{1}(:,1))))],['N-06 = ' num2str(length(ResidualsAll{2}(:,1))-sum(isnan(ResidualsAll{2}(:,1))))],['N-06_{class} = ' num2str(length(ResidualsAll{3}(:,1))-sum(isnan(ResidualsAll{3}(:,1))))]};
+text(-8,.2,txt);
 
-% Finish reference pdfs for each tested product
-fig6 = figure(6);
-% plot([0,0],[0,.8], 'linewidth', 2, 'Color','k') % plot reference 0 line
+%Non-parametirc pdfs w/ histograms
+fig7 = figure(7); clf; hold on
+for i = 1:N_Products
+    if i == 1
+        h(i) = histogram(ResidualsAll{i}(:,3),'Normalization','pdf');  h(i).FaceAlpha = 1; h(i).BinWidth = binwidth; h(i).FaceColor = colors{i}(3,:);  h(i).EdgeColor = 'k';
+        pd = fitdist(ResidualsAll{i}(:,3),'kernel','Kernel','normal'); 
+        fplot(@(x) pdf(pd,x),[-10 8], 'Linewidth', 2,'Color',colors{i}(2,:));
+    else
+        h(i) = histogram(ResidualsAll{i}(:,1),'Normalization','pdf');  h(i).FaceAlpha = .5; h(i).BinWidth = binwidth; h(i).FaceColor = colors{i}(3,:);  h(i).EdgeColor = 'k';
+        pd = fitdist(ResidualsAll{i}(:,1),'kernel','Kernel','normal'); 
+        fplot(@(x) pdf(pd,x),[-10 8], 'Linewidth', 2,'Color',colors{i}(2,:));
+    end
+end
+%plot([0,0],[0,.8], 'linewidth', 2, 'Color','k') % plot reference 0 line
+set(gca,'fontsize',16,'xlim',[-4 2]);
+set(gcf,'position',[50 50 800 400]);
+legend('ATL08','ATL08 pdf','ATL06sr','ATL06sr pdf','ATL06sr ATL08 class','ATL06sr ATL08 class pdf');
+xlabel('Vertical offset (m)'); ylabel('Probability density');
+txt = {['N-08 = ' num2str(length(ResidualsAll{1}(:,1))-sum(isnan(ResidualsAll{1}(:,1))))],['N-06 = ' num2str(length(ResidualsAll{2}(:,1))-sum(isnan(ResidualsAll{2}(:,1))))],['N-06_{class} = ' num2str(length(ResidualsAll{3}(:,1))-sum(isnan(ResidualsAll{3}(:,1))))]};
+text(-3,.2,txt);
+
+fig8 = figure(8); clf; hold on
+for i = 1:N_Products
+    if i == 1
+        pd = fitdist(ResidualsAll{i}(:,3),'kernel','Kernel','normal'); 
+        fplot(@(x) pdf(pd,x),[-10 8], 'Linewidth', 2,'Color',colors{i}(3,:));
+    else
+        pd = fitdist(ResidualsAll{i}(:,1),'kernel','Kernel','normal'); 
+        fplot(@(x) pdf(pd,x),[-10 8], 'Linewidth', 2,'Color',colors{i}(3,:));
+    end
+end
 set(gca,'fontsize',16);
 set(gcf,'position',[50 50 800 400]);
 legend('ATL08','ATL06sr','ATL06sr ATL08 clasifications','Location','northwest');
 xlabel('Vertical offset (m)'); ylabel('Probability density');
+hold off
+
+% Normal pdfs for each tested product
+fig6 = figure(6); clf; hold on
+for i = 1:N_Products
+    if i == 1
+        fplot(@(x) mynormpdf(x,Dmean{i}(:,1), Dstd{i}(:,1)),[-10 8], 'Linewidth', 3,'Color',colors{i}(3,:));
+    else
+        fplot(@(x) mynormpdf(x,Dmean{i}(:,1), Dstd{i}(:,1)),[-10 8], 'Linewidth', 3,'Color',colors{i}(3,:));
+    end
+end
+set(gca,'fontsize',16);
+set(gcf,'position',[50 50 800 400]);
+legend('ATL08','ATL06sr','ATL06sr ATL08 clasifications','Location','northwest');
+xlabel('Vertical offset (m)'); ylabel('Probability density');
+hold off
 
 %% create boxcharts for each terrain parameter
-% ResidualsTable.residuals = [ResidualsAll{1}(:,3); ResidualsAll{2}(:,1); ResidualsAll{3}(:,1)];
-% ResidualsTable.product = [ResidualsAll{1}(:,4); ResidualsAll{2}(:,4); ResidualsAll{3}(:,4)];
-% ResidualsTable.elevations = [E_08.elevation_report_mean; E_06.elevation_report_mean; E_06_class.elevation_report_mean];
-% ResidualsTable.aspect = [I_08.aspect; I_06.aspect; I_06_class.aspect];
-% ResidualsTable.slope = [I_08.slope; I_06.slope; I_06_class.slope];
+ResidualsTable.residuals = [ResidualsAll{1}(:,3); ResidualsAll{2}(:,1); ResidualsAll{3}(:,1)];
+ResidualsTable.product = [ResidualsAll{1}(:,4); ResidualsAll{2}(:,4); ResidualsAll{3}(:,4)];
+ResidualsTable.elevations = [E_08.elevation_report_mean; E_06.elevation_report_mean; E_06_class.elevation_report_mean];
+ResidualsTable.aspect = [I_08.aspect; I_06.aspect; I_06_class.aspect];
+ResidualsTable.slope = [I_08.slope; I_06.slope; I_06_class.slope];
 
-ResidualsTable.residuals = [ResidualsAll{2}(:,1); ResidualsAll{3}(:,1)];
-ResidualsTable.product = [ResidualsAll{2}(:,4); ResidualsAll{3}(:,4)];
-ResidualsTable.elevations = [E_06.elevation_report_mean; E_06_class.elevation_report_mean];
-ResidualsTable.aspect = [I_06.aspect; I_06_class.aspect];
-ResidualsTable.slope = [I_06.slope; I_06_class.slope];
+% ResidualsTable.residuals = [ResidualsAll{2}(:,1); ResidualsAll{3}(:,1)];
+% ResidualsTable.product = [ResidualsAll{2}(:,4); ResidualsAll{3}(:,4)];
+% ResidualsTable.elevations = [E_06.elevation_report_mean; E_06_class.elevation_report_mean];
+% ResidualsTable.aspect = [I_06.aspect; I_06_class.aspect];
+% ResidualsTable.slope = [I_06.slope; I_06_class.slope];
 figure(5);
 %ELEVATION
 h = histogram(E_08.elevation_report_mean(~isnan(ResidualsAll{1}(:,1))),5);
 elev_binwidth = h.BinWidth; elev_binedges = h.BinEdges;
 clear h;
-% close(gcf);
+%close(gcf);
 %SLOPE
 h = histogram(I_08.slope(~isnan(ResidualsAll{1}(:,1))),5);
 slope_binwidth = h.BinWidth; slope_binedges = h.BinEdges;
@@ -328,3 +377,10 @@ xlabel('Slope (degrees)','fontsize',16); %ylabel('Elevation residuals (m)','font
 %text(1,max(ylims)-0.05*range(ylims),'a)','fontsize',16);
 
 
+%% Save figs
+% saveas(fig1,['/Users/karinazikan/Documents/figures/' abbrev '_atl08_tracks'],'png')
+% saveas(fig2,['/Users/karinazikan/Documents/figures/' abbrev 'DEMmethods_hist'],'png')
+% saveas(fig3,['/Users/karinazikan/Documents/figures/' abbrev 'DEMmethods_pdf'],'png')
+% saveas(fig4,['/Users/karinazikan/Documents/figures/' abbrev 'prod_hists_wpdf'],'png')
+% saveas(fig5,['/Users/karinazikan/Documents/figures/' abbrev 'terrain_boxplots'],'png')
+% saveas(fig6,['/Users/karinazikan/Documents/figures/' abbrev 'prod_pdf'],'png')

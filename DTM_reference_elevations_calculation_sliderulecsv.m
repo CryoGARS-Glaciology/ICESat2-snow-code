@@ -22,17 +22,17 @@ addpath(['./functions'])
 
 %DTM (be sure the path ends in a /)
 DTM_path = 'RCEW/RCEW_DEM/';
-DTM_name = 'RCEW_1m_WGS84UTM11_WGS84.tif';
+DTM_name = 'RCEW_2014_Lidar_Derived_1m_DEM-ellipsoidalWGS84.tif';
 if contains(DTM_name,'.tif')
     DTM_date = '20120826'; %only need to change this if the DTM is a geotiff
 end
 
 %csv (be sure the path ends in a /)
 csv_path = '/Users/karinazikan/Desktop/GitHub/ICESat2-snow-code/RCEW/';
-csv_name = 'RCEW-ICESat2-ATL06sr-atl08class.csv';
+csv_name = 'DCEW-ICESat2-ATL06sr.csv';
 
 %site abbreviation for file names
-abbrev = 'RCEW';
+abbrev = 'DCEW';
 
 %ICESat-2 product acronym
 acronym = 'ATL06';

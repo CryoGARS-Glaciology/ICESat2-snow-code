@@ -1,19 +1,26 @@
 %%% This code was writen by Karina Zikan and Ellyn Enderlin to calculate
 %%% non-weighted mean, weighted mean, and weighted fitted refference
-%%% elevations from a reference DTM to compare to ICESat-2 ATL08 data
-%%% (edits are planned to make this also work for ICESat-2 ATL06 data)
-%%%
+%%% elevations from a reference DTM and mean slope and aspect from slope 
+%%% and aspect maps to compare to ICESat-2 ATL08 data
+%%% (Use DTM_reference_elevations_calculation_sliderulecsv.m for ATL06 data from sliderule)
+%%% << Adding mean vegitation is planned >>
+%%% 
 %%% SPECIFIED INPUTS:
 %%%     DTM_path = path to the reference DTM on your computer
 %%%     DTM_name = DTM file name
+%%%     DTM_slope = Slope map file name
+%%%     DTM_aspect = Aspect map file name
 %%%     csv_path = path to the ICESat-2 datafiles on your computer
+%%%     csv_name = name of ICESat-2 csv file
 %%%     abbrev = site abriviation for file name
 %%%     acronym = ICESat-2 product acronym
 %%% OUTPUTS:
-%%%     Reference_Elevations = csv datatable reporting the non-weighted 
-%%%         mean, weighted mean, and weighted fitted refference elevations
+%%%     Reference_Elevations = csv datatable reporting the non-weighted
+%%%         mean, std, weighted mean, and weighted fitted refference elevations,
+%%%         mean slope, std slope, mean aspect, std aspect
+%%%         
 %%%
-%%% Last updated: May 10 2022 by Karina Zikan
+%%% Last updated: Jan 2023 by Karina Zikan
 
 
 %% Inputs
@@ -21,17 +28,22 @@ clearvars; close all;
 addpath(['./functions']) 
 
 %DTM (be sure the path ends in a /)
-DTM_path = 'RCEW/RCEW_DEM/';
-DTM_name = 'RCEW_1m_WGS84UTM11_WGS84.tif';
+DTM_path = 'DryCreek/DCEW_DEM/';
+DTM_name = 'DryCreekBase1m_WGS84UTM11_WGS84.tif';
 if contains(DTM_name,'.tif')
     DTM_date = '20120826'; %only need to change this if the DTM is a geotiff
 end
+% Slope
+DTM_slope = 'DryCreekBase1m_WGS84UTM11_WGS84_slope.tif';
+% Aspect
+DTM_aspect = 'DryCreekBase1m_WGS84UTM11_WGS84_aspect.tif';
+
 
 %csv (be sure the path ends in a /)
-csv_path = '/Users/karinazikan/Desktop/GitHub/ICESat2-snow-code/RCEW/';
+csv_path = '/Users/karinazikan/Documents/ICESat2-snow-code/DryCreek/';
 
 %site abbreviation for file names
-abbrev = 'RCEW';
+abbrev = 'DCEW';
 
 %ICESat-2 product acronym
 acronym = 'ATL08';
@@ -41,8 +53,9 @@ elseif acronym == 'ATL06'
     ATL0X = 6;
 else
     error('acronym must be ATL06 or ATL08')
-end
+end 
 
+%% Read in files
 %days of year
 modays_norm = [31 28 31 30 31 30 31 31 30 31 30 31];
 cumdays_norm = cumsum(modays_norm); cumdays_norm = [0 cumdays_norm(1:11)];
@@ -60,6 +73,8 @@ elseif contains(DTM_name,'.mat')
         DEMdate(i) = Z(i).deciyear;
     end
 end
+slope = readgeoraster(DTM_slope);
+aspect = readgeoraster(DTM_aspect);
 
 %identify the ICESat-2 data csv files
 cd_to_csv = ['cd ',csv_path]; eval(cd_to_csv);
@@ -73,14 +88,10 @@ elevations(elevations > 10000) = nan; % more trash takeout
 
 %load the ICESat-2 data
 T = table; %create a table
-% for i = 1:length(csvs)
-%     icesat2 = [csv_path,'RCEW-ICESat2-ATL08-params']; %compile the file name
-%     file = readtable(icesat2); %read in files
-%     T = [T; file]; %combine tables
-% end
-icesat2 = [csv_path,'RCEW-ICESat2-ATL08-params']; %compile the file name
+icesat2 = [csv_path abbrev '-ICESat2-ATL08-params']; %compile the file name
 file = readtable(icesat2); %read in files
 T = [T; file];
+%T = T(1:5,:); % ONLY FOR TESTING!!!!!!!!!!
 
 % T = T([1:250],:);
 zmod = T.Elevation(:); % save the median 'model' elevations (icesat-2 elevations)
@@ -99,7 +110,7 @@ end_flag = zeros(size(norths,1),1);
 end_flag(unique_refs) = 1; end_flag(unique_refs(unique_refs~=1)-1) = 1; end_flag(end) = 1;
 
 
-%% Calculating footprints and reference elevation for each data point
+%% Calculating footprints for each data point
 %define the Reference elevation data
 if isfield(Ref,'LatitudeLimits')
     [latgrid,longrid] = meshgrid(Ref.LongitudeLimits(1)+0.5*Ref.CellExtentInLongitude:Ref.CellExtentInLongitude:Ref.LongitudeLimits(2)-0.5*Ref.CellExtentInLongitude,...
@@ -118,7 +129,7 @@ end
     % calculates footprint corners
     [xc,yc,theta] = ICESat2_FootprintCorners(norths,easts,ATL0X,end_flag);
 
-%% Calculate Reference Elevations
+%% Calculate Reference Elevations, Slope, & Aspect
 for r=1:length(zmod)  
     %identify the R2erence elevation points in each ICESat2 footprint
     xv = xc(r,[3:6 3]); % bounding box x vector
@@ -129,6 +140,8 @@ for r=1:length(zmod)
     pointsinx = xgrid(in); % save x locations
     pointsiny = ygrid(in); % save y locations
     elevationsin = elevations(in); % save elevations
+    slopesin = slope(in); % save slopes
+    aspectsin = aspect(in); % save slopes
     
     %wieghted average
     dist = nan([1,length(pointsinx)])'; %initialize dist
@@ -143,6 +156,10 @@ for r=1:length(zmod)
 
     %non wieghted average
     elevation_report_nw_mean(r,:) = nanmean(elevationsin); % non-wieghted elevations
+    slope_mean(r,:) = nanmean(slopesin);
+    slope_std(r,:) = std(slopesin);
+    aspect_mean(r,:) = nanmean(aspectsin);
+    aspect_std(r,:) = std(aspectsin);
 
     %weighted fit
     warning('off')
@@ -175,7 +192,7 @@ for r=1:length(zmod)
 end
 
 %Write reference elevation table
-E = table(elevation_report_nw_mean,elevation_report_mean,elevation_report_fitted,elevation_report_std);
+E = table(elevation_report_nw_mean,elevation_report_mean,elevation_report_fitted,elevation_report_std,slope_mean,slope_std,aspect_mean,aspect_std);
 writetable(E,[abbrev,'-ICESat2-',acronym,'-ref-elevations.csv']);
 
 

@@ -13,6 +13,12 @@
 # Ignore all asv files
 *.asv
 
+# Ignore all tif files
+*.tif
+
+# Ignore jupyter checkpoint folder
+**/.ipynb_checkpoints/
+
 # Ignore RCEW_DEM directory
 **/RCEW_DEM/
 
@@ -24,6 +30,3 @@
 
 # Ignore Mores directory
 **/Mores/
-
-# Ignore jupyter checkpoint folder
-**/.ipynb_checkpoints/

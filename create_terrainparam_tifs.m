@@ -23,7 +23,7 @@ UTMzone = 6; EPSGcode = 32606;
 DEMs = dir('*DEM*.tif');
 for j = 1:length(DEMs)
     disp(DEMs(j).name);
-    [Z,R] = readgeoraster(DEMs(j).name); Z(Z<0) = NaN;
+    [Z,R] = readgeoraster(DEMs(j).name); Z(Z<0) = NaN; Z(Z>10000) = NaN;
     [xgrid,ygrid] = meshgrid(R.XWorldLimits(1):R.CellExtentInWorldX:R.XWorldLimits(2),R.YWorldLimits(2):-R.CellExtentInWorldY:R.YWorldLimits(1));
     
     [LAT,LON]=utm2ll(xgrid,ygrid,UTMzone);

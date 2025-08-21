@@ -8,7 +8,7 @@ These codes have been designed and tested using ATL08 data for Reynolds Creek Ex
 These codes were executed using Matlab 2020b and should work with comparable versions. The codes can be downloaded and run for a study site that has (1) high-quality reference elevation map(s) and (2) ICESat-2 level3a hdf5 files. The cmocean color pallettes (https://www.mathworks.com/matlabcentral/fileexchange/57773-cmocean-perceptually-uniform-colormaps) are used for some figures but can be substituted with Matlab's built-in color pallettes. If you find that supporting codes are needed but not provided, please contact the repo owner!
 
 # Execution
-Detailed instructions will be provided shortly...
+Each code is described briefly below and in the order in which they should be run. Note that the nsidc_data_download.py code is not the only way to download ICESat-2 files from NSIDC. ICESat-2 data can be processed using customized formatting and downloaded using the SlideRule package, but they may need some formatting before they can be assimilated into this workflow.
 1) nsidc-data-download.py: Downloads ICESat-2 hdf5 files from NSIDC using Earthdata credentials after specifying location, dataset, and time period.
 2) batch_icesat2_h5_to_csv.mlx: Extracts basic parameters (x,y,z, etc) from hdf5 files and creates csvs. Calls write_icesat2_csv.m and wgs2utm.m.
 4) batch_icesat2_coregistration.m: Specify site-specific parameters in the top section, then run the coregistration section to calculate horizontal coregistration offsets using a gradient descent approach and extract elevations from the reference elevation dataset(s), and run the last section to vertically coregister the transects. Calls coregister_icesat2.m and extract_icesat2_vertical_errors.m. 
